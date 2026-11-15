@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://dkx1mduoj1be4"]
+
+[ext_resource type="PackedScene" uid="uid://dyoi0fd7eu710" path="res://assets/3D assests/nuevosmodelos3d/TunnelIntersectionT.glb" id="1_ms4ml"]
+
+[node name="TunnelIntersectionT" unique_id=1587457805 instance=ExtResource("1_ms4ml")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="3" unique_id=856946109]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.4, 0)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="4" unique_id=29703631]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.4, 0)
+
+[node name="Marker3D3" type="Marker3D" parent="." index="5" unique_id=336916618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, -1)

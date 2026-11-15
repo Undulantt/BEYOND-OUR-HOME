@@ -1,6 +1,11 @@
 class_name BuildingService
 extends RefCounted
 
+# These authored marker models extend beyond their logical grid footprints.
+# Portless models keep one cell clear of them; tunnels and other port-bearing
+# models are exempt so their cylinders can meet the authored markers.
+const VISUAL_OVERHANG_TYPES := [&"base", &"isru", &"refinery"]
+
 var ledger: ResourceLedger
 var grid: GridService
 var power: PowerService
@@ -27,7 +32,14 @@ func initialize_layout() -> GameContracts.ValidationResult:
 		if definition == null:
 			return GameContracts.failure(&"invalid_initial_layout")
 		var id := String(row["id"])
-		GameState.data["buildings"]["instances"][id] = _new_instance(id, definition, Vector2i(int(origin[0]), int(origin[1])))
+		var instance := _new_instance(id, definition, Vector2i(int(origin[0]), int(origin[1])))
+		instance["rotation_quarters"] = posmod(int(row.get("rotation_quarters", 0)), 4)
+		var offset_m: Variant = row.get("offset_m", [0.0, 0.0])
+		if offset_m is Array and offset_m.size() >= 2:
+			instance["offset_m"] = [float(offset_m[0]), float(offset_m[1])]
+		if instance["rotation_quarters"] % 2 == 1:
+			instance["size"] = [definition.footprint.y, definition.footprint.x]
+		GameState.data["buildings"]["instances"][id] = instance
 		var suffix := id.get_slice("_", id.get_slice_count("_") - 1)
 		if suffix.is_valid_int():
 			GameState.data["buildings"]["next_id"] = maxi(int(GameState.data["buildings"]["next_id"]), int(suffix) + 1)
@@ -62,6 +74,8 @@ func validate_placement(request: GameContracts.PlacementRequest) -> GameContract
 	var zone_result := grid.validate_zone(rect, &"building")
 	if not zone_result.ok:
 		return _placement_failure(zone_result.error_code)
+	if _has_visual_overhang_conflict(rect, request.building_type):
+		return _placement_failure(&"zone_occupied")
 	for x in range(rect.position.x, rect.end.x):
 		for y in range(rect.position.y, rect.end.y):
 			var cell := Vector2i(x, y)
@@ -70,18 +84,48 @@ func validate_placement(request: GameContracts.PlacementRequest) -> GameContract
 				return _placement_failure(&"invalid_terrain")
 	if _inside_reactor_exclusion(rect):
 		return _placement_failure(&"reactor_exclusion")
-	if definition.connection_rule == &"tunnel" and not _touches_tunnel(rect, request.building_type == &"tunnel"):
-		return _placement_failure(&"tunnel_required")
+	var connection_offset := Vector2.ZERO
+	if definition.connection_rule == &"tunnel":
+		var matched_offset: Variant = _find_tunnel_offset(rect, request.building_type, request.rotation_quarters)
+		if matched_offset == null:
+			return _placement_failure(&"tunnel_required")
+		connection_offset = matched_offset
+	elif request.building_type == &"isru":
+		# ISRU still connects to power by proximity, but align its authored tunnel
+		# marker when an open tunnel is adjacent. A 2x2 footprint has an even-meter
+		# center while a one-cell tunnel has an odd-meter center, so the marker can
+		# otherwise miss by one meter despite occupying neighboring cells.
+		var isru_tunnel_offset: Variant = _find_tunnel_offset(rect, request.building_type, request.rotation_quarters)
+		if isru_tunnel_offset != null:
+			connection_offset = isru_tunnel_offset
 	if definition.connection_rule == &"proximity" and request.building_type != &"reactor" and not _near_energized(rect):
 		return _placement_failure(&"energy_connection_required")
 	if not ledger.can_afford(definition.cost):
 		return _placement_failure(&"insufficient_resources")
 	answer.costs = definition.cost.duplicate(true)
+	if definition.connection_rule == &"tunnel" or request.building_type == &"isru":
+		answer.params["offset_m"] = [connection_offset.x, connection_offset.y]
 	if definition.connection_rule == &"tunnel":
 		answer.required_connections.append(&"tunnel")
 	else:
 		answer.required_connections.append(&"energy")
 	return answer
+
+func _has_visual_overhang_conflict(rect: Rect2i, candidate_type: StringName) -> bool:
+	var candidate_has_ports := TunnelNetwork.PORT_SCENES.has(String(candidate_type))
+	var buildings: Dictionary = GameState.data.get("buildings", {}).get("instances", {})
+	for item: Dictionary in buildings.values():
+		var type := StringName(item.get("type", ""))
+		if type == &"tunnel" or not VISUAL_OVERHANG_TYPES.has(type):
+			continue
+		if not candidate_has_ports and grid._rect(item).grow(1).intersects(rect):
+			return true
+	for item: Dictionary in buildings.values():
+		if TunnelNetwork.PORT_SCENES.has(String(item.get("type", ""))):
+			continue
+		if VISUAL_OVERHANG_TYPES.has(candidate_type) and grid._rect(item).grow(1).intersects(rect):
+			return true
+	return false
 
 func place(request: GameContracts.PlacementRequest) -> GameContracts.PlacementResult:
 	var result := validate_placement(request)
@@ -93,6 +137,8 @@ func place(request: GameContracts.PlacementRequest) -> GameContracts.PlacementRe
 		return _placement_failure(&"insufficient_resources")
 	GameState.data["buildings"]["next_id"] = int(GameState.data["buildings"]["next_id"]) + 1
 	var instance := _new_instance(id, definition, request.origin)
+	instance["rotation_quarters"] = request.rotation_quarters
+	instance["offset_m"] = result.params.get("offset_m", [0.0, 0.0]).duplicate(true)
 	if request.rotation_quarters % 2 == 1:
 		instance["size"] = [definition.footprint.y, definition.footprint.x]
 	GameState.data["buildings"]["instances"][id] = instance
@@ -341,14 +387,32 @@ func _inside_reactor_exclusion(rect: Rect2i) -> bool:
 			return true
 	return false
 
-func _touches_tunnel(rect: Rect2i, allow_base: bool = false) -> bool:
+func _find_tunnel_offset(rect: Rect2i, building_type: StringName, rotation_quarters: int) -> Variant:
+	var offsets: Array[Vector2] = [Vector2.ZERO]
+	for x in [-1.0, -0.5, 0.5, 1.0]:
+		offsets.append(Vector2(x, 0.0))
+		offsets.append(Vector2(0.0, x))
+	for x in [-1.0, -0.5, 0.5, 1.0]:
+		for y in [-1.0, -0.5, 0.5, 1.0]:
+			offsets.append(Vector2(x, y))
+	for offset in offsets:
+		if _touches_tunnel(rect, building_type, rotation_quarters, offset):
+			return offset
+	return null
+
+func _touches_tunnel(rect: Rect2i, building_type: StringName = &"laboratory", rotation_quarters: int = 0, offset_m: Vector2 = Vector2.ZERO) -> bool:
+	var candidate := {"type": String(building_type), "origin": [rect.position.x, rect.position.y], "size": [rect.size.x, rect.size.y], "rotation_quarters": rotation_quarters, "offset_m": [offset_m.x, offset_m.y]}
 	for item in GameState.data["buildings"]["instances"].values():
-		if item.get("type") != "tunnel" and not (allow_base and item.get("type") == "base"):
+		if item.get("type") != "tunnel" and not (building_type == &"tunnel" and item.get("type") == "base"):
 			continue
 		if not TunnelNetwork.is_open(item):
 			continue
-		if grid._edge_distance(rect, grid._rect(item)) <= 1.0:
-			return true
+		for x in range(rect.position.x, rect.end.x):
+			for y in range(rect.position.y, rect.end.y):
+				var cell := Vector2i(x, y)
+				for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+					if TunnelNetwork.ports_meet(candidate, cell, item, direction):
+						return true
 	return false
 
 func _near_energized(rect: Rect2i) -> bool:

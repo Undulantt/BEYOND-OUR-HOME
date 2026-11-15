@@ -2,8 +2,13 @@ class_name ResourceLedger
 extends RefCounted
 
 var report
+var infinite_resources := false
+
+func set_infinite_resources(enabled: bool) -> void:
+	infinite_resources = enabled
 
 func initialize(initial_inventory: Dictionary) -> void:
+	infinite_resources = false
 	GameState.data["inventory"] = initial_inventory.duplicate(true)
 	GameState.data["ledger_entries"] = []
 
@@ -15,13 +20,17 @@ func get_snapshot() -> Dictionary:
 
 func can_afford(cost: Dictionary) -> bool:
 	for id in cost:
-		if not _valid_amount(cost[id]) or get_amount(StringName(id)) < float(cost[id]):
+		if not _valid_amount(cost[id]):
+			return false
+		if not infinite_resources and get_amount(StringName(id)) < float(cost[id]):
 			return false
 	return true
 
 func spend(cost: Dictionary, reason: String) -> bool:
 	if not can_afford(cost):
 		return false
+	if infinite_resources:
+		return true
 	var delta := {}
 	for id in cost:
 		var amount := float(cost[id])

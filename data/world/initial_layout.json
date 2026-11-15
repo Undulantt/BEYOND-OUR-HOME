@@ -2,19 +2,20 @@
   "initial_size": 32,
   "buildings": [
     {"id": "base_1", "type": "base", "origin": [14, 14]},
-    {"id": "isru_1", "type": "isru", "origin": [10, 14]},
-    {"id": "greenhouse_1", "type": "greenhouse", "origin": [18, 14]},
+    {"id": "isru_1", "type": "isru", "origin": [10, 14], "rotation_quarters": 2, "offset_m": [0.0, 1.0]},
+    {"id": "greenhouse_1", "type": "greenhouse", "origin": [18, 14], "rotation_quarters": 1, "offset_m": [0.0, -1.0]},
     {"id": "reactor_1", "type": "reactor", "origin": [1, 1]},
-    {"id": "tunnel_1", "type": "tunnel", "origin": [13, 15]},
-    {"id": "tunnel_2", "type": "tunnel", "origin": [17, 15]}
+    {"id": "tunnel_isru", "type": "tunnel", "origin": [12, 15], "rotation_quarters": 1},
+    {"id": "tunnel_1", "type": "tunnel", "origin": [13, 15], "rotation_quarters": 1},
+    {"id": "tunnel_2", "type": "tunnel", "origin": [17, 15], "rotation_quarters": 1}
   ],
   "terrain_patches": [
     {"type": "aquifer", "rect": [10, 14, 2, 2]},
     {"type": "iron_regolith", "rect": [24, 23, 6, 6]}
   ],
   "tutorial_sites": {
-    "laboratory": [14, 18],
+    "laboratory": [15, 18],
     "solar_panel": [10, 18],
-    "new_tunnel_tiles": [[14, 17]]
+    "new_tunnel_tiles": [[15, 17]]
   }
 }

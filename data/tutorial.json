@@ -175,11 +175,11 @@
   },
   "build_sites": {
     "tunnel": [
-      14,
+      15,
       17
     ],
     "laboratory": [
-      14,
+      15,
       18
     ],
     "solar_panel": [

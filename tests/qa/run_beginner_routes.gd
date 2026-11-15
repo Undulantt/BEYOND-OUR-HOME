@@ -19,8 +19,8 @@ func run() -> void:
 	for route in ["single_worker_8h", "two_workers_8h", "wait_then_research", "repair_and_first_rocket"]:
 		main._start_new([&"engineer_a", &"medic", &"botanist_a", &"scientist_a"])
 		main.dialogue.skip_tutorial()
-		require(main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17))).ok, route + " tunnel")
-		var lab := main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(14, 18)))
+		require(main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(15, 17))).ok, route + " tunnel")
+		var lab := main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(15, 18)))
 		require(lab.ok, route + " lab")
 		main.power.step(0.0)
 		if route == "wait_then_research":

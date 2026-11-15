@@ -11,9 +11,9 @@ var _content: HBoxContainer
 var tutorial_mode := false
 
 func _ready() -> void:
-	theme = UiHelpers.mission_theme()
+	theme = UiHelpers.mission_game_theme()
 	_content = HBoxContainer.new()
-	_content.add_theme_constant_override("separation", 14)
+	_content.add_theme_constant_override("separation", 8)
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(_content)
@@ -52,18 +52,19 @@ func refresh() -> void:
 
 	var portrait := TextureRect.new()
 	portrait.texture = ROBOT_TEXTURE
-	portrait.custom_minimum_size = Vector2(84.0, 84.0) if tutorial_mode else Vector2(130.0, 120.0)
+	portrait.custom_minimum_size = Vector2(56.0, 56.0) if tutorial_mode else Vector2(76.0, 72.0)
 	portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	portrait.visible = not tutorial_mode
 	_content.add_child(portrait)
-	UiHelpers.add_si_mark(portrait, 14)
+	UiHelpers.add_si_mark(portrait, 10)
 
 	var text_column := VBoxContainer.new()
-	text_column.add_theme_constant_override("separation", 8)
+	text_column.add_theme_constant_override("separation", 5)
 	text_column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	text_column.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -72,20 +73,20 @@ func refresh() -> void:
 	var heading := _tr(&"ui.alert_title" if critical else &"ui.guide_title")
 	if not step.is_empty():
 		heading = "%s · %s" % [_tr(&"onboarding.goal", {"step": step["index"], "total": step["total"]}), _tr(StringName(step["title_key"]))]
-	var title := UiHelpers.label(heading, 22)
+	var title := UiHelpers.label(heading, 17)
 	title.max_lines_visible = 2
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.modulate = Color("ffd29a") if critical else Color("a3dfd2")
 	text_column.add_child(title)
 
 	var message_scroll := ScrollContainer.new()
 	message_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	message_scroll.custom_minimum_size.y = 128.0
+	message_scroll.custom_minimum_size.y = 75.0
 	message_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	text_column.add_child(message_scroll)
-	var message := UiHelpers.label(_tr(StringName(entry["message_key"]), entry.get("params", {})), 20)
+	var message := UiHelpers.label(_tr(StringName(entry["message_key"]), entry.get("params", {})), 15)
 	message.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	message_scroll.add_child(message)
 
 	var buttons := HFlowContainer.new()
@@ -129,11 +130,11 @@ func _apply_card_style(critical: bool) -> void:
 	panel.bg_color = Color(0.035, 0.05, 0.07, 0.94)
 	panel.border_color = Color("d79a5b") if critical else Color("73c7b7")
 	panel.set_border_width_all(2)
-	panel.set_corner_radius_all(18)
-	panel.content_margin_left = 14.0
-	panel.content_margin_right = 18.0
-	panel.content_margin_top = 12.0
-	panel.content_margin_bottom = 12.0
+	panel.set_corner_radius_all(7)
+	panel.content_margin_left = 9.0
+	panel.content_margin_right = 9.0
+	panel.content_margin_top = 8.0
+	panel.content_margin_bottom = 8.0
 	add_theme_stylebox_override("panel", panel)
 
 func _tr(key: StringName, params: Dictionary = {}) -> String:

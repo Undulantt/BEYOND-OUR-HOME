@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://coepuf8mqkl1g"]
+
+[ext_resource type="PackedScene" uid="uid://dfkegoxj3d7v" path="res://assets/3D assests/nuevosmodelos3d/Laboratory.glb" id="1_f3442"]
+
+[node name="Laboratory" unique_id=1471941116 instance=ExtResource("1_f3442")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="3" unique_id=99737288]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.4, -1)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="4" unique_id=1229736939]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.4, -2)

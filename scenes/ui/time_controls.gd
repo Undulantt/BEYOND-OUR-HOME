@@ -10,18 +10,20 @@ var _speeds: Dictionary = {}
 var _last_clock := ""
 
 func _ready() -> void:
-	_sol = UiHelpers.label("", 18)
+	_sol = UiHelpers.label("", 14)
+	_sol.add_theme_font_size_override("font_size", 14)
 	_sol.autowrap_mode = TextServer.AUTOWRAP_OFF
 	add_child(_sol)
 	_pause = UiHelpers.button("", _toggle_pause)
+	_compact_control(_pause, 64.0)
 	add_child(_pause)
 	_settings = UiHelpers.button("⚙", func(): settings_requested.emit())
-	_settings.custom_minimum_size.x = 52.0
+	_compact_control(_settings, 34.0)
 	_settings.tooltip_text = UiHelpers.translated(&"menu.settings")
 	add_child(_settings)
 	for speed in [0.5, 1.0, 2.0, 4.0]:
 		var choice := UiHelpers.button("×%s" % speed, func(): GameClock.set_speed(speed); refresh())
-		choice.custom_minimum_size.x = 68
+		_compact_control(choice, 38.0)
 		choice.toggle_mode = true
 		_speeds[speed] = choice
 		add_child(choice)
@@ -29,6 +31,17 @@ func _ready() -> void:
 	SignalBus.sol_started.connect(func(_sol_number): refresh())
 	SignalBus.state_restored.connect(refresh)
 	refresh()
+
+func _compact_control(button: Button, width: float) -> void:
+	button.custom_minimum_size = Vector2(width, 30.0)
+	button.add_theme_font_size_override("font_size", 13)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := button.get_theme_stylebox(state).duplicate() as StyleBox
+		style.content_margin_left = 5.0
+		style.content_margin_right = 5.0
+		style.content_margin_top = 2.0
+		style.content_margin_bottom = 2.0
+		button.add_theme_stylebox_override(state, style)
 
 func _process(_delta: float) -> void:
 	var clock := GameClock.get_snapshot()

@@ -45,14 +45,6 @@ static func add_menu_background(parent: Control, image_position: Vector2) -> Tex
 	planet.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(planet)
 
-	# Figma animates the image from 2111×943.344 px down to 2061×921 px,
-	# then holds for the remaining 1.5 seconds of its two-second loop.
-	var expanded_scale := Vector2(2111.0 / 2061.0, 943.344 / 921.0)
-	planet.scale = expanded_scale
-	var tween := planet.create_tween().set_loops()
-	tween.tween_property(planet, "scale", Vector2.ONE, 0.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tween.tween_interval(1.5)
-	tween.tween_property(planet, "scale", expanded_scale, 0.001)
 	return planet
 
 static func add_menu_label(parent: Control, value: String, position_value: Vector2, size_value: Vector2, font_size: int) -> Label:
@@ -240,6 +232,62 @@ static func _disconnect_observers(node: Node) -> void:
 			source.disconnect(connection["callable"])
 	for child in node.get_children():
 		_disconnect_observers(child)
+
+static func mission_game_theme() -> Theme:
+	var result := Theme.new()
+	result.default_font_size = 15
+	for type in ["Button", "OptionButton", "LineEdit", "Label", "PopupMenu"]:
+		result.set_font_size("font_size", type, 15)
+	result.set_constant("scrollbar_width", "VScrollBar", 10)
+	result.set_color("font_color", "Label", Color("dce7e9"))
+	result.set_color("font_color", "Button", Color("e7f1f2"))
+	result.set_color("font_hover_color", "Button", Color("ffffff"))
+	result.set_color("font_disabled_color", "Button", Color("9c9aa0"))
+	result.set_color("font_pressed_color", "Button", Color("ffffff"))
+	result.set_color("font_focus_color", "Button", Color("ffffff"))
+	var panel := StyleBoxFlat.new()
+	panel.bg_color = Color("101d26")
+	panel.border_color = Color("39505a")
+	panel.set_border_width_all(1)
+	panel.set_corner_radius_all(5)
+	panel.set_content_margin_all(9)
+	result.set_stylebox("panel", "PanelContainer", panel)
+	var button := StyleBoxFlat.new()
+	button.bg_color = Color("293e49")
+	button.border_color = Color("49616b")
+	button.set_border_width_all(1)
+	button.set_corner_radius_all(4)
+	button.set_content_margin_all(8)
+	button.content_margin_top = 5
+	button.content_margin_bottom = 5
+	result.set_stylebox("normal", "Button", button)
+	var hover := button.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("365968")
+	hover.border_color = Color("66a5a6")
+	result.set_stylebox("hover", "Button", hover)
+	var pressed := button.duplicate() as StyleBoxFlat
+	pressed.bg_color = Color("247879")
+	pressed.border_color = Color("80c6be")
+	result.set_stylebox("pressed", "Button", pressed)
+	result.set_stylebox("hover_pressed", "Button", pressed.duplicate())
+	var disabled := button.duplicate() as StyleBoxFlat
+	disabled.bg_color = Color("26333b")
+	disabled.border_color = Color("34434a")
+	result.set_stylebox("disabled", "Button", disabled)
+	var focus := StyleBoxFlat.new()
+	focus.draw_center = false
+	focus.border_color = Color("ffe3a1")
+	focus.set_border_width_all(3)
+	focus.set_corner_radius_all(8)
+	for type in ["Button", "OptionButton", "LineEdit"]:
+		result.set_stylebox("focus", type, focus)
+		if type != "Button":
+			var input_style := panel.duplicate() as StyleBoxFlat
+			input_style.content_margin_top = 12
+			input_style.content_margin_bottom = 12
+			result.set_stylebox("normal", type, input_style)
+			result.set_stylebox("hover", type, hover.duplicate())
+	return result
 
 static func mission_theme() -> Theme:
 	var result := Theme.new()

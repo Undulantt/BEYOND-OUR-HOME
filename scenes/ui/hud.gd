@@ -30,17 +30,27 @@ var _tutorial_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	theme = UiHelpers.mission_theme()
+	theme = UiHelpers.mission_game_theme()
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var margin := MarginContainer.new()
 	add_child(margin)
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.mouse_filter = Control.MOUSE_FILTER_PASS
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_%s" % side, 12)
+		margin.add_theme_constant_override("margin_%s" % side, 6)
 	var column := UiHelpers.column(margin)
 	column.mouse_filter = Control.MOUSE_FILTER_PASS
 	var status := PanelContainer.new()
+	var status_style := StyleBoxFlat.new()
+	status_style.bg_color = Color("101b27")
+	status_style.border_color = Color("354c5c")
+	status_style.set_border_width_all(1)
+	status_style.set_corner_radius_all(6)
+	status_style.content_margin_left = 8.0
+	status_style.content_margin_right = 8.0
+	status_style.content_margin_top = 6.0
+	status_style.content_margin_bottom = 6.0
+	status.add_theme_stylebox_override("panel", status_style)
 	column.add_child(status)
 	var status_column := UiHelpers.column(status)
 	_vitals = VitalStatusBar.new()
@@ -48,6 +58,7 @@ func _ready() -> void:
 	_time = TimeControls.new()
 	_time.settings_requested.connect(func(): settings_requested.emit())
 	status_column.add_child(_time)
+	status_column.add_theme_constant_override("separation", 5)
 	var center := UiHelpers.row(column)
 	center.mouse_filter = Control.MOUSE_FILTER_PASS
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -59,7 +70,7 @@ func _ready() -> void:
 	var navigation := UiHelpers.row(_dock)
 	_back = UiHelpers.button("", func(): show_panel(&"workspace"))
 	navigation.add_child(_back)
-	_dock_title = UiHelpers.label("", 22)
+	_dock_title = UiHelpers.label("", 18)
 	navigation.add_child(_dock_title)
 	var close := UiHelpers.button("×", close_panel)
 	close.custom_minimum_size.x = 44
@@ -91,13 +102,17 @@ func _ready() -> void:
 	for id in ["tools", "report", "log", "help", "demo"]:
 		var item := UiHelpers.button("", func(): _toolbar_action(id))
 		_toolbar[id] = item
+		_compact_footer_button(item)
 		footer.add_child(item)
 	_save_button = UiHelpers.button("", func(): save_requested.emit())
 	_pause_button = UiHelpers.button("", func(): pause_requested.emit())
+	_compact_footer_button(_save_button)
+	_compact_footer_button(_pause_button)
 	footer.add_child(_save_button)
 	_tutorial_button = UiHelpers.button("", func():
 		if services.has("dialogue"):
 			services["dialogue"].recall_tutorial())
+	_compact_footer_button(_tutorial_button)
 	footer.add_child(_tutorial_button)
 	footer.add_child(_pause_button)
 	_final = FinalResultView.new()
@@ -113,9 +128,20 @@ func _ready() -> void:
 	resized.connect(_layout)
 	_map_space.resized.connect(func(): call_deferred("_update_camera"); call_deferred("_layout_guide"))
 	_refresh_buttons()
-	show_panel(&"workspace")
+	close_panel()
 	configure(services, world)
 	_layout()
+
+func _compact_footer_button(button: Button) -> void:
+	button.custom_minimum_size = Vector2(0.0, 32.0)
+	button.add_theme_font_size_override("font_size", 14)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var style := button.get_theme_stylebox(state).duplicate() as StyleBox
+		style.content_margin_left = 7.0
+		style.content_margin_right = 7.0
+		style.content_margin_top = 3.0
+		style.content_margin_bottom = 3.0
+		button.add_theme_stylebox_override(state, style)
 
 func _mount_view(id: String, view: Control) -> void:
 	var scroll := ScrollContainer.new()
@@ -160,21 +186,21 @@ func _toolbar_action(id: String) -> void:
 func _layout() -> void:
 	if _dock == null:
 		return
-	_dock.custom_minimum_size.x = clampf(size.x * 0.35, 360.0, 460.0)
+	_dock.custom_minimum_size.x = clampf(size.x * 0.22, 260.0, 320.0)
 	_layout_guide()
 	call_deferred("_update_camera")
 
 func _layout_guide() -> void:
 	if not is_instance_valid(_guide) or size.x <= 0.0 or size.y <= 0.0:
 		return
-	var width := minf(size.x - 24.0, clampf(size.x * 0.62, 300.0, 860.0))
-	var height := minf(size.y - 24.0, 340.0)
+	var width := minf(size.x - 24.0, clampf(size.x * 0.38, 360.0, 500.0))
+	var height := minf(size.y - 24.0, 210.0)
 	if _guide.tutorial_mode and is_instance_valid(_map_space):
 		var area := _map_space.get_global_rect()
-		width = maxf(300.0, minf(660.0, area.size.x - 16.0))
-		height = maxf(200.0, minf(360.0, area.size.y - 16.0))
+		width = minf(maxf(0.0, area.size.x - 16.0), clampf(area.size.x * 0.56, 420.0, 560.0))
+		height = minf(maxf(0.0, area.size.y - 16.0), 205.0)
 		_guide.size = Vector2(width, height)
-		_guide.position = Vector2(area.position.x + 8.0, area.end.y - height - 8.0)
+		_guide.position = Vector2(area.position.x + (area.size.x - width) * 0.5, area.end.y - height - 8.0)
 		return
 	_guide.size = Vector2(width, height)
 	_guide.position = (size - _guide.size) * 0.5

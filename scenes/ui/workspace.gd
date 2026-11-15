@@ -35,7 +35,7 @@ func _ready() -> void:
 	var column := UiHelpers.column(self)
 	_tab_picker = OptionButton.new()
 	_tab_picker.fit_to_longest_item = false
-	_tab_picker.custom_minimum_size.y = 44
+	_tab_picker.custom_minimum_size.y = 36
 	column.add_child(_tab_picker)
 	for id in TABS:
 		_tab_picker.add_item(_tr(StringName("tab.%s" % id)))

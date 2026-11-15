@@ -128,8 +128,8 @@ func _start_new(profile_ids: Array[StringName]) -> void:
 	dialogue.rebuild_from_state()
 	world.cancel_placement()
 	world.selected_id = &""
-	world.camera_rig.focus = Vector3(16, 0, 16)
-	world.camera_rig.zoom = 36.0
+	world.camera_rig.focus = Vector3(32, 0, 32)
+	world.camera_rig.zoom = 40.0
 	world.camera_rig._apply()
 	hud._workspace.reset_drafts()
 	hud.show_panel(&"workspace")

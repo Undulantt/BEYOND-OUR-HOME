@@ -40,8 +40,8 @@ func solar_output() -> float:
 func run() -> void:
 	get_window().size = Vector2i(1920, 1080)
 	main._start_new([&"medic", &"medic", &"medic", &"medic"])
-	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17)))
-	main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(14, 18)))
+	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(15, 17)))
+	main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(15, 18)))
 	main.power.step(0.0)
 	check(main.research.start_research(&"solar_panel").ok, "start solar research")
 	check(main.crew.queue_research(&"crew_1", &"laboratory_4", 8.0).ok, "assign first researcher")

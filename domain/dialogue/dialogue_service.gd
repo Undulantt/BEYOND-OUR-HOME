@@ -212,7 +212,7 @@ func restart_tutorial() -> void:
 	_refresh_tutorial()
 
 func tutorial_build_site(kind: StringName) -> Vector2i:
-	var values: Array = _tutorial_data().get("build_sites", {}).get(String(kind), [14, 17])
+	var values: Array = _tutorial_data().get("build_sites", {}).get(String(kind), [15, 17])
 	var preferred := Vector2i(int(values[0]), int(values[1]))
 	if buildings == null:
 		return preferred

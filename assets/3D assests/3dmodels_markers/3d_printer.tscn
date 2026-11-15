@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://phot54tskrwn"]
+
+[ext_resource type="PackedScene" uid="uid://bye7h8vi2puhj" path="res://assets/3D assests/nuevosmodelos3d/3DPrinter.glb" id="1_oo482"]
+
+[node name="3DPrinter" unique_id=250812576 instance=ExtResource("1_oo482")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="31" unique_id=565743460]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.4, 0)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="32" unique_id=979397441]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.4, 2)
+
+[node name="Marker3D3" type="Marker3D" parent="." index="33" unique_id=815141621]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0.4, -2)

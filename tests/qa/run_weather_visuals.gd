@@ -41,14 +41,15 @@ func run() -> void:
 	await settle()
 	var weather := main.world.weather
 	var environment: Environment = main.world.get_node("WorldEnvironment").environment
-	check(not weather.visible and not environment.fog_enabled, "clear weather has no overlay or fog")
+	check(not weather.visible and environment.fog_enabled and environment.fog_density < 0.002, "clear weather has a faint ambient haze only")
 	var clear_sun: float = main.world.get_node("Sun").light_energy
+	check(clear_sun <= 0.2521, "daytime sun stays below the reduced lighting cap")
 	await capture("clear")
 	GameState.data["clock"]["sol"] = 11
 	main.events.on_sol_started(11)
 	await settle()
 	check(weather.visible and weather.phases.get("dust_storm") == "warning", "scheduled storm warning appears on map")
-	check(not weather.dust_active and not environment.fog_enabled, "warning does not pretend the storm is active")
+	check(not weather.dust_active and environment.fog_density < 0.002, "warning does not pretend the storm is active")
 	await capture("warning")
 	GameState.data["clock"]["sol"] = 12
 	main.events.on_sol_started(12)
@@ -62,7 +63,7 @@ func run() -> void:
 	var saved := SaveService.export_state()
 	check(main.events.clear_event(&"dust_storm").ok, "storm can be cleared")
 	await settle()
-	check(not weather.visible and not environment.fog_enabled, "ending the storm removes fog and overlay")
+	check(not weather.visible and environment.fog_enabled and environment.fog_density < 0.002, "ending the storm restores the faint ambient haze")
 	check(is_equal_approx(main.world.get_node("Sun").light_energy, clear_sun), "ending restores normal sunlight")
 	check(SaveService.import_state(saved) == OK, "active weather save loads")
 	await settle()
@@ -82,7 +83,7 @@ func run() -> void:
 	var input := InputEventMouseButton.new()
 	input.button_index = MOUSE_BUTTON_LEFT
 	input.pressed = true
-	input.position = main.world.camera_rig.camera.unproject_position(Vector3(15.5, 0.0, 15.5))
+	input.position = main.world.camera_rig.camera.unproject_position(Vector3(31.0, 0.0, 31.0))
 	get_viewport().push_input(input, true)
 	await settle()
 	check(main.world.selected_id == &"base_1", "real map click selects a building through the storm")
@@ -95,7 +96,7 @@ func run() -> void:
 	main.events.clear_event(&"dust_storm")
 	check(main.events.trigger_event(&"solar_flare").ok, "solar flare starts")
 	await settle()
-	check(weather.flare_active and not weather.dust_active and not environment.fog_enabled, "flare has its own glow and arcs without dust fog")
+	check(weather.flare_active and not weather.dust_active and environment.fog_density < 0.002, "flare has its own glow and arcs without storm fog")
 	check(weather._label.text.contains("RADIACIÓN"), "flare is labelled independently of its color")
 	await capture("flare")
 	SettingsService.apply_settings({"language": "en"})
@@ -129,11 +130,11 @@ func run() -> void:
 	main.events.set_event_enabled(&"random_events", false)
 	main.events.on_sol_started(24)
 	await settle()
-	check(not weather.dust_active and not environment.fog_enabled, "natural expiration removes weather as the sol advances")
+	check(not weather.dust_active and environment.fog_density < 0.002, "natural expiration removes storm fog and restores ambient haze")
 	GameState.data["events"]["items"].clear()
 	SignalBus.state_restored.emit()
 	await settle()
-	check(not weather.visible and not environment.fog_enabled, "empty restored state clears all weather")
+	check(not weather.visible and environment.fog_enabled and environment.fog_density < 0.002, "empty restored state clears storm weather")
 	var result := {"passed": failures.is_empty(), "checks": checks, "failures": failures, "captures": captures}
 	var output := FileAccess.open("user://weather-result.json", FileAccess.WRITE)
 	output.store_string(JSON.stringify(result, "\t"))

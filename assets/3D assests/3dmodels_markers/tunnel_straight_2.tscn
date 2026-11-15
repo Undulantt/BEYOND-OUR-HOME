@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://h7f8k4ktrqmb"]
+
+[ext_resource type="PackedScene" uid="uid://c3vmcx0wyiqps" path="res://assets/3D assests/nuevosmodelos3d/TunnelStraight.glb" id="1_uckbs"]
+
+[node name="TunnelStraight2" unique_id=1179063557 instance=ExtResource("1_uckbs")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="2" unique_id=507127055]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, -1)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="3" unique_id=1919969249]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 1)

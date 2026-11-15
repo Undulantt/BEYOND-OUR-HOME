@@ -25,8 +25,8 @@ func button_with_text(root: Node, text: String) -> Button:
 
 func research_round() -> void:
 	main.menu.start_requested.emit(profiles)
-	main.world.placement_requested.emit(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17)))
-	main.world.placement_requested.emit(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(14, 18)))
+	main.world.placement_requested.emit(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(15, 17)))
+	main.world.placement_requested.emit(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(15, 18)))
 	main.power.step(0.0)
 	var lab := StringName("")
 	for status in main.building.get_all_statuses():
@@ -69,8 +69,8 @@ func _run() -> void:
 		start.pressed.emit()
 	check(GameState.is_running(), "mission starts through actual menu controls")
 	main.menu.start_requested.emit(profiles)
-	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17)))
-	var crop := main.building.place(GameContracts.PlacementRequest.new(&"greenhouse", Vector2i(14, 18)))
+	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(15, 17)))
+	var crop := main.building.place(GameContracts.PlacementRequest.new(&"greenhouse", Vector2i(15, 18)))
 	check(crop.ok, "new greenhouse placed")
 	main.hud._inspector.show_target(StringName(crop.params.get("building_id", "")))
 	var plant := button_with_text(main.hud._inspector, LocalizationDB.translate_key(&"ui.plant_seed"))

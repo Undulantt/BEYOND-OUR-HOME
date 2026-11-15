@@ -20,8 +20,8 @@ func reset() -> void:
 	main._start_new([&"medic", &"medic", &"medic", &"medic"])
 
 func lab() -> StringName:
-	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17)))
-	var result := main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(14, 18)))
+	main.building.place(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(15, 17)))
+	var result := main.building.place(GameContracts.PlacementRequest.new(&"laboratory", Vector2i(15, 18)))
 	main.power.step(0.0)
 	return StringName(result.params["building_id"])
 
@@ -113,7 +113,7 @@ func run() -> void:
 	main.world.camera_rig.focus_cell(Vector2i(200, 200))
 	reset()
 	check(main.hud._workspace._manifest.is_empty(), "QA-012 a new mission must not inherit a previous cargo draft")
-	check(main.world.camera_rig.focus.distance_to(Vector3(16, 0, 16)) < 1.0, "QA-012 a new mission must center the camera on its colony")
+	check(main.world.camera_rig.focus.distance_to(Vector3(32, 0, 32)) < 1.0, "QA-012 a new mission must center the camera on its colony")
 	main.session.update(NAN)
 	check(is_finite(main.session.runner.accumulator), "QA-013 a non-finite delta must not poison the simulation clock")
 	reset()

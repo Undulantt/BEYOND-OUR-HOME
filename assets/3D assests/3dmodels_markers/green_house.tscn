@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://csy228vbk8q4q"]
+
+[ext_resource type="PackedScene" uid="uid://dqn0v6voegkbr" path="res://assets/3D assests/nuevosmodelos3d/GreenHouse.glb" id="1_vguc8"]
+
+[node name="GreenHouse" unique_id=1241929313 instance=ExtResource("1_vguc8")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="4" unique_id=657246579]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.4, -3)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="5" unique_id=640025026]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0.4, 3)

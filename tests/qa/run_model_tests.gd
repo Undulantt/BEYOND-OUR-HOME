@@ -76,6 +76,19 @@ func run() -> void:
 		model.queue_free()
 	# Every orthogonal neighbor mask must point the selected asset's ports at neighbors.
 	var original := GameState.to_dict()
+	# Replacing the starter ISRU at its same site must recover the authored 1 m
+	# offset so the rotated 2x2 port lands on the one-cell tunnel port.
+	GameState.data["research"]["unlocked"].append("isru")
+	main.ledger.add(BuildingDefinition.from_balance(&"isru").cost, "isru-port-test-funding")
+	GameState.data["buildings"]["instances"].erase("isru_1")
+	var replacement_isru := main.building.place(GameContracts.PlacementRequest.new(&"isru", Vector2i(10, 14), 2))
+	check(replacement_isru.ok, "ISRU placement remains proximity-powered beside an open tunnel")
+	if replacement_isru.ok:
+		var replacement_item: Dictionary = GameState.data["buildings"]["instances"][String(replacement_isru.params["building_id"])]
+		check(replacement_item["offset_m"] == [0.0, 1.0], "ISRU placement applies the 1 m port alignment offset")
+		check(TunnelNetwork.ports_meet(replacement_item, Vector2i(11, 15), original["buildings"]["instances"]["tunnel_isru"], Vector2i(1, 0)), "placed ISRU port physically meets its tunnel")
+	GameState.from_dict(original)
+	SignalBus.state_restored.emit()
 	# Place every building through its real service, with explicit test terrain/funding.
 	for kind in MartianWorld.BUILDING_MODELS:
 		GameState.from_dict(original)
@@ -108,11 +121,12 @@ func run() -> void:
 	SignalBus.state_restored.emit()
 	var instances: Dictionary = GameState.data["buildings"]["instances"]
 	var directions: Array[Vector2i] = [Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+	var center_tunnel := fixture("tunnel", Vector2i(16, 16))
 	var asset_ports := {
-		"TunnelStraight.glb": [Vector2i.UP, Vector2i.DOWN],
-		"TunnelCorner.glb": [Vector2i.UP, Vector2i.LEFT],
-		"TunnelIntersectionT.glb": [Vector2i.UP, Vector2i.RIGHT, Vector2i.LEFT],
-		"TunnelIntersection.glb": [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+		"tunnel_straight_2.tscn": [Vector2i.UP, Vector2i.DOWN],
+		"tunnel_corner.tscn": [Vector2i.UP, Vector2i.LEFT],
+		"tunnel_intersection_t.tscn": [Vector2i.UP, Vector2i.RIGHT, Vector2i.LEFT],
+		"tunnel_intersection.tscn": [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 	}
 	for mask in 16:
 		instances.clear()
@@ -120,7 +134,7 @@ func run() -> void:
 			if mask & (1 << bit):
 				var cell := Vector2i(16, 16) + directions[bit]
 				instances["neighbor_%d" % bit] = {"type": "tunnel", "origin": [cell.x, cell.y], "size": [1, 1], "condition": "normal", "health": 100.0, "isolated": false}
-		var selected := main.world._tunnel_model(Vector2i(16, 16))
+		var selected := main.world._tunnel_model(center_tunnel)
 		var model: Node3D = selected["scene"].instantiate()
 		gallery.add_child(model)
 		model.rotation.y = selected["rotation"]
@@ -137,8 +151,19 @@ func run() -> void:
 		model.queue_free()
 	# A laboratory next to a tunnel must be represented as a physical connection.
 	instances.clear()
-	instances["laboratory_test"] = {"type": "laboratory", "origin": [17, 16], "size": [2, 2], "condition": "normal", "health": 100.0}
-	check(main.world._tunnel_connections(Vector2i(16, 16)).has(Vector2i(1, 0)), "visual tunnel recognizes neighboring laboratory")
+	instances["laboratory_test"] = fixture("laboratory", Vector2i(17, 16), Vector2i(2, 2))
+	check(main.world._tunnel_connections(center_tunnel).has(Vector2i(1, 0)), "visual tunnel recognizes neighboring laboratory")
+	# The starter ISRU occupies two logical cells per side. Its authored port and
+	# one-cell tunnel must still resolve to the same physical junction at 2 m/cell.
+	instances.clear()
+	var isru := fixture("isru", Vector2i(10, 14), Vector2i(2, 2))
+	isru["rotation_quarters"] = 2
+	isru["offset_m"] = [0.0, 1.0]
+	instances["isru_test"] = isru
+	var isru_tunnel := fixture("tunnel", Vector2i(12, 15))
+	instances["isru_tunnel"] = isru_tunnel
+	check(TunnelNetwork.ports_meet(isru_tunnel, Vector2i(12, 15), isru, Vector2i(-1, 0)), "ISRU marker meets adjacent tunnel in topology")
+	check(main.world._tunnel_connections(isru_tunnel).has(Vector2i(-1, 0)), "visual tunnel recognizes rotated 2x2 ISRU port")
 	# A real chain must reach the base; diagonal contact and sealed/broken segments do not.
 	instances.clear()
 	instances["base_1"] = fixture("base", Vector2i(10, 10), Vector2i(3, 3))

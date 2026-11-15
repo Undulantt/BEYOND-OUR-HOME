@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://bnn31jcdhi73g"]
+
+[ext_resource type="PackedScene" uid="uid://cah7sj01518wa" path="res://assets/3D assests/nuevosmodelos3d/ISRU.glb" id="1_4ailf"]
+
+[node name="ISRU" unique_id=1195677237 instance=ExtResource("1_4ailf")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="16" unique_id=1999727090]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 2)
+
+[node name="Marker3D2" type="Marker3D" parent="." index="17" unique_id=1136563700]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.4, 0)
+
+[node name="Marker3D3" type="Marker3D" parent="." index="18" unique_id=1200944417]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, -2)

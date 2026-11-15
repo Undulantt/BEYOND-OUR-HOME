@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://0v0gmk7020ji"]
+
+[ext_resource type="PackedScene" uid="uid://c6muneatny4k8" path="res://assets/3D assests/nuevosmodelos3d/Refinery.glb" id="1_njlf3"]
+
+[node name="Refinery" unique_id=185447926 instance=ExtResource("1_njlf3")]
+
+[node name="Marker3D" type="Marker3D" parent="." index="14" unique_id=550588838]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, -3)
