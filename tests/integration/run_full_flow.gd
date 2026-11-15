@@ -18,7 +18,7 @@ func _run() -> void:
 	await get_tree().process_frame
 	check(get_window().size == Vector2i(960, 540), "960 window selected")
 	check(main.hud._workspace.get_global_rect().end.x <= main.hud.get_global_rect().end.x, "workspace fits scaled canvas")
-	check(main.hud._vitals._labels["autonomy"].get_global_rect().end.x <= main.hud.get_global_rect().end.x, "vitals fit scaled canvas")
+	check(main.hud._vitals._labels["pressure"].get_global_rect().end.x <= main.hud.get_global_rect().end.x, "vitals fit scaled canvas")
 	get_window().size = Vector2i(1280, 720)
 	await get_tree().process_frame
 	check(main.hud._workspace.get_global_rect().end.x <= main.hud.get_global_rect().end.x, "workspace fits 1280 canvas")

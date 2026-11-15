@@ -11,7 +11,7 @@ func reset(seed_value: int) -> void:
 		"inventory": {}, "ledger_entries": [], "power": {"stored": 0.0, "priorities": {}},
 		"life_support": {"supply": {}, "shortages": {}}, "crew": {}, "buildings": {},
 		"world": {}, "research": {}, "events": {}, "rockets": {},
-		"autonomy": {}, "reports": {}, "settings": {}, "dialogue": {},
+		"reports": {}, "settings": {}, "dialogue": {},
 		"tutorial": {}, "result": ""
 	}
 
@@ -20,6 +20,11 @@ func to_dict() -> Dictionary:
 
 func from_dict(value: Dictionary) -> void:
 	data = value.duplicate(true)
+	# Drop retired indicators when loading older saves.
+	data.erase("autonomy")
+	for member in data.get("crew", {}).get("members", {}).values():
+		member.erase("morale")
+		member.erase("break_remaining")
 
 func is_running() -> bool:
 	return data.has("clock") and data["clock"] is Dictionary and data.has("crew") and String(data.get("result", "")).is_empty()

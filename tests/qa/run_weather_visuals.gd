@@ -26,6 +26,8 @@ func capture(label: String) -> void:
 		main.dialogue.acknowledge(StringName(entry["id"]))
 	main.hud._guide.refresh()
 	await settle()
+	if DisplayServer.get_name() == "headless":
+		return
 	await RenderingServer.frame_post_draw
 	var path := "user://weather-%s.png" % label
 	get_viewport().get_texture().get_image().save_png(path)

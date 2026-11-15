@@ -5,7 +5,6 @@ var id: StringName
 var profile_id: StringName
 var alive: bool
 var health: float
-var morale: float
 var fatigue: float
 var dose: float
 var shelter: bool
@@ -19,7 +18,6 @@ static func from_dict(value: Dictionary) -> CrewStatus:
 	result.profile_id = StringName(value.get("profile_id", ""))
 	result.alive = bool(value.get("alive", false))
 	result.health = float(value.get("health", 0.0))
-	result.morale = float(value.get("morale", 0.0))
 	result.fatigue = float(value.get("fatigue", 0.0))
 	result.dose = float(value.get("dose", 0.0))
 	result.shelter = bool(value.get("shelter", false))

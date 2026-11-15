@@ -57,6 +57,25 @@ func _run() -> void:
 	GameState.data["buildings"]["instances"].erase("isru_power_probe")
 	GameState.data["buildings"]["instances"].erase("isru_port_probe")
 	GameState.data["buildings"]["instances"]["isru_1"] = starter_isru
+	# Every authored hatch must accept a new tunnel, including rotated buildings.
+	var saved_instances: Dictionary = GameState.data["buildings"]["instances"]
+	for type in TunnelNetwork.PORT_SCENES:
+		if type == "tunnel":
+			continue
+		for rotation in range(4):
+			var footprint := BuildingDefinition.from_balance(StringName(type)).footprint
+			if rotation % 2 == 1:
+				footprint = Vector2i(footprint.y, footprint.x)
+			var host := {"type": type, "origin": [12, 12], "size": [footprint.x, footprint.y], "rotation_quarters": rotation}
+			GameState.data["buildings"]["instances"] = {"host": host}
+			var center := Vector2(24 + footprint.x, 24 + footprint.y)
+			for port in TunnelNetwork.port_positions(host):
+				var relative := port - center
+				var direction := Vector2(signf(relative.x), 0) if absf(relative.x) / footprint.x > absf(relative.y) / footprint.y else Vector2(0, signf(relative.y))
+				var cell := Vector2i((port + direction) / 2.0)
+				var quote := buildings.validate_placement(GameContracts.PlacementRequest.new(&"tunnel", cell))
+				_check(quote.ok, "tunnel attaches to %s hatch %s at rotation %d" % [type, port, rotation])
+	GameState.data["buildings"]["instances"] = saved_instances
 	var wrong_port := buildings.validate_placement(GameContracts.PlacementRequest.new(&"tunnel", Vector2i(14, 17)))
 	_check(not wrong_port.ok, "adjacency without matching markers is rejected")
 	_check(grid.is_revealed(Vector2i(31, 31)), "initial 32 map")

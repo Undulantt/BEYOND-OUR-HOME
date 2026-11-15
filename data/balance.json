@@ -30,10 +30,6 @@
 		},
 		"work_hours_per_sol": 12.0,
 		"sleep_hours_per_sol": 8.0,
-		"low_morale_threshold": 40.0,
-		"break_threshold": 15.0,
-		"morale_work_speed_at_low": 0.7,
-		"medical_global_morale_bonus": 0.18,
 		"radiation_limit": 100.0
 	},
 	"initial_inventory": {
@@ -245,23 +241,13 @@
 			"seeds": 1.0,
 			"spare_parts": 2.0,
 			"medicine": 1.0,
-			"astronaut_replacement": 18.0
+			"astronaut_replacement": 18.0,
+			"iron_plates": 1.0
 		},
 		"salvage": {
 			"iron_plates": 12.0,
 			"chips": 1.0
 		}
-	},
-	"autonomy": {
-		"window_sols": 1.0,
-		"resources": [
-			"oxygen",
-			"water",
-			"food"
-		],
-		"earth_support_target_percent": 100.0,
-		"mass_change_per_percent_over_target": -0.25,
-		"mass_change_per_percent_under_target": 0.25
 	},
 	"events": {
 		"random_events_start_sol": 22.0,

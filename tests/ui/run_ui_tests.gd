@@ -42,11 +42,15 @@ func _run() -> void:
 	add_child(chooser)
 	for i in 4:
 		chooser.add_profile(&"medic")
-	_assert(chooser.selected.size() == 4, "four repeated profiles")
+	_assert(chooser.selected.size() == 1, "duplicate selection is rejected")
+	for profile in [&"engineer_a", &"botanist_a", &"scientist_a"]:
+		chooser.add_profile(profile)
+	_assert(chooser.selected.size() == 4, "four distinct profiles selected")
 	chooser.queue_free()
 	var hud := MissionHud.new()
 	add_child(hud)
 	_assert(hud._workspace != null and hud._workspace.TABS.size() == 7, "seven tabs")
+	_assert(hud._vitals._labels.keys() == ["water", "food", "pressure"], "only water food pressure in HUD")
 	var ledger := ResourceLedger.new()
 	var building := BuildingService.new()
 	var grid := GridService.new()

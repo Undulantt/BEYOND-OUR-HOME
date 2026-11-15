@@ -80,10 +80,6 @@ func _on_sol_started(sol: int) -> void:
 	SignalBus.sol_started.emit(sol)
 
 func _on_sol_ended(sol: int) -> void:
-	var autonomy := _calculate_autonomy(sol)
-	GameState.data["autonomy"] = autonomy
-	if services.has("rocket") and services["rocket"].has_method("update_support"):
-		services["rocket"].update_support(autonomy, GameState.data.get("goals", {}))
 	for name in ["event", "rocket", "production", "crew", "research"]:
 		if services.has(name) and services[name].has_method("on_sol_ended"):
 			services[name].on_sol_ended(sol)
@@ -92,19 +88,6 @@ func _on_sol_ended(sol: int) -> void:
 	_check_defeat()
 	if GameState.is_running() and sol >= int(ConfigDB.balance["time"]["total_sols"]):
 		_finish(&"victory")
-
-func _calculate_autonomy(sol: int) -> Dictionary:
-	var report: Dictionary = services["report"].get_report(sol) if services.has("report") else {}
-	var produced: Dictionary = report.get("production", {})
-	var consumed: Dictionary = report.get("consumption", {})
-	var ratios := {}
-	var total := 0.0
-	for resource in ConfigDB.balance["autonomy"]["resources"]:
-		var use := float(consumed.get(resource, 0.0))
-		var ratio := minf(1.0, float(produced.get(resource, 0.0)) / use) if use > 0.0 else 1.0
-		ratios[resource] = ratio
-		total += ratio
-	return {"sol": sol, "by_resource": ratios, "percent": 100.0 * total / maxf(1.0, float(ratios.size()))}
 
 func _check_defeat() -> void:
 	if not services.has("crew"):

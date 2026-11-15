@@ -48,8 +48,6 @@ class RocketStub extends RefCounted:
 	func on_sol_started(sol: int) -> void:
 		if sol in [7, 14, 21, 28]:
 			arrivals.append(sol)
-	func update_support(_autonomy: Dictionary, _goals: Dictionary) -> void:
-		pass
 
 var failures: Array[String] = []
 

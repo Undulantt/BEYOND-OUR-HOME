@@ -13,7 +13,7 @@ ambient_light_energy = 0.48
 fog_enabled = true
 fog_light_color = Color(0.55, 0.39, 0.3, 1)
 fog_light_energy = 0.3
-fog_density = 0.0012
+fog_density = 0.0006
 
 [node name="World" type="Node3D"]
 script = ExtResource("1")
@@ -30,6 +30,8 @@ script = ExtResource("1")
 rotation_degrees = Vector3(-45, -25, 0)
 light_energy = 0.252
 shadow_enabled = true
+directional_shadow_mode = 2
+directional_shadow_max_distance = 160.0
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("1")

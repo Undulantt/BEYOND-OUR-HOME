@@ -403,7 +403,7 @@ func _find_tunnel_offset(rect: Rect2i, building_type: StringName, rotation_quart
 func _touches_tunnel(rect: Rect2i, building_type: StringName = &"laboratory", rotation_quarters: int = 0, offset_m: Vector2 = Vector2.ZERO) -> bool:
 	var candidate := {"type": String(building_type), "origin": [rect.position.x, rect.position.y], "size": [rect.size.x, rect.size.y], "rotation_quarters": rotation_quarters, "offset_m": [offset_m.x, offset_m.y]}
 	for item in GameState.data["buildings"]["instances"].values():
-		if item.get("type") != "tunnel" and not (building_type == &"tunnel" and item.get("type") == "base"):
+		if item.get("type") != "tunnel" and not (building_type == &"tunnel" and TunnelNetwork.has_tunnel_port(item)):
 			continue
 		if not TunnelNetwork.is_open(item):
 			continue

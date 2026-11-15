@@ -96,7 +96,7 @@ func _sync_daylight() -> void:
 	var flare := weather != null and weather.flare_active
 	# A faint rusty haze softens the horizon in clear weather; dust storms deepen it.
 	environment.fog_enabled = true
-	environment.fog_density = 0.0012
+	environment.fog_density = 0.0006
 	environment.fog_light_color = Color("796452").lerp(Color("b0804c"), sunlight)
 	environment.fog_light_energy = lerpf(0.2, 0.4, sunlight)
 	if dust:

@@ -104,19 +104,6 @@ func on_sol_started(sol: int) -> void:
 		if int(plan["arrival_sol"]) == sol and not bool(plan["landed"]):
 			trigger_arrival(StringName(id))
 
-func update_support(autonomy: Dictionary, _goals: Dictionary) -> void:
-	_ensure_plans()
-	var balance: Dictionary = ConfigDB.balance
-	var target := float(balance["autonomy"]["earth_support_target_percent"])
-	var percent := clampf(float(autonomy.get("percent", target)), 0.0, 100.0)
-	var delta := (percent - target) * float(balance["autonomy"]["mass_change_per_percent_over_target"]) if percent >= target else (target - percent) * float(balance["autonomy"]["mass_change_per_percent_under_target"])
-	for id in ["rocket_1", "rocket_2", "rocket_3", "rocket_4"]:
-		var plan: Dictionary = GameState.data["rockets"]["plans"][id]
-		if not bool(plan["confirmed"]) and not bool(plan["landed"]) and int(plan["arrival_sol"]) > int(autonomy.get("sol", 0)):
-			plan["mass_limit"] = clampf(float(plan["mass_limit"]) + delta, float(balance["rockets"]["mass_min"]), float(balance["rockets"]["mass_max"]))
-			SignalBus.rocket_changed.emit(StringName(id), &"support_updated")
-			break
-
 func validate_salvage(rocket_id: StringName, crew_id: StringName) -> GameContracts.ValidationResult:
 	var plan := _plan(rocket_id)
 	if plan.is_empty() or not bool(plan["landed"]) or plan["disposition"] != "available":

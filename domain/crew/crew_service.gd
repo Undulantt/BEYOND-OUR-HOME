@@ -205,10 +205,9 @@ func step(delta_seconds: float) -> void:
 				shortage += 1
 		if shortage > 0:
 			member["health"] = maxf(0.0, float(member["health"]) - 12.0 * shortage * fraction)
-			member["morale"] = maxf(0.0, float(member["morale"]) - 5.0 * shortage * fraction)
 		var task_id := String(member.get("task_id", ""))
 		var task: Dictionary = GameState.data["crew"]["tasks"].get(task_id, {})
-		if not task.is_empty() and not bool(member.get("shelter", false)) and float(member.get("break_remaining", 0.0)) <= 0.0:
+		if not task.is_empty() and not bool(member.get("shelter", false)):
 			var worked := float(member.get("worked_hours_today", 0.0))
 			var max_work := minf(float(ConfigDB.balance["astronaut"]["work_hours_per_sol"]), 24.0 - float(member.get("sleep_hours", 8.0)))
 			if worked < max_work:
@@ -218,8 +217,6 @@ func step(delta_seconds: float) -> void:
 					speed *= float(profile.get("benefit", {}).get("repair_multiplier", profile.get("drawback", {}).get("repair_multiplier", 1.0)))
 				if task.get("task_type") == "research":
 					speed *= float(profile.get("benefit", {}).get("science_multiplier", profile.get("drawback", {}).get("science_multiplier", 1.0)))
-				if float(member["morale"]) < float(ConfigDB.balance["astronaut"]["low_morale_threshold"]):
-					speed *= float(ConfigDB.balance["astronaut"]["morale_work_speed_at_low"])
 				var effort := minf(hours, max_work - worked)
 				var performed := scheduler.progress(StringName(id), effort * speed)
 				effort = performed / speed if speed > 0.0 else 0.0
@@ -233,10 +230,6 @@ func step(delta_seconds: float) -> void:
 					var dose_added := dose_rate * fraction
 					member["dose"] = float(member["dose"]) + dose_added
 					member["dose_today"] = float(member.get("dose_today", 0.0)) + dose_added
-		if float(member.get("break_remaining", 0.0)) > 0.0:
-			member["break_remaining"] = maxf(0.0, float(member["break_remaining"]) - hours)
-		elif float(member["morale"]) < float(ConfigDB.balance["astronaut"]["break_threshold"]):
-			member["break_remaining"] = 1.0
 		member["sleep_hours_today"] = minf(float(member["sleep_hours"]), float(member.get("sleep_hours_today", 0.0)) + fraction * float(member["sleep_hours"]))
 		member["fatigue"] = maxf(0.0, float(member["fatigue"]) - 8.0 * fraction)
 		if float(member["dose"]) >= float(ConfigDB.balance["astronaut"]["radiation_limit"]):
@@ -248,29 +241,19 @@ func step(delta_seconds: float) -> void:
 			SignalBus.crew_changed.emit(StringName(id))
 
 func on_sol_ended(sol: int) -> void:
-	var profiles := Astronaut.profiles()
 	if report != null:
 		for task in GameState.data.get("crew", {}).get("tasks", {}).values():
 			if task.get("state") == "completed" and int(task.get("completed_sol", -1)) == sol:
 				_record_fact("work_%s" % task["id"], String(task["target_id"]), sol,
 					&"crew.work_completed", {"crew_id": task["crew_id"], "task_type": task["task_type"]},
 					{"work_hours": float(task["completed_hours"])})
-	var medic_present := false
-	for member in GameState.data.get("crew", {}).get("members", {}).values():
-		if bool(member.get("alive", false)) and profiles.get(String(member["profile_id"]), {}).get("benefit", {}).has("global_morale_multiplier"):
-			medic_present = true
 	for id in GameState.data.get("crew", {}).get("members", {}):
 		var member: Dictionary = GameState.data["crew"]["members"][id]
 		if not bool(member.get("alive", false)):
 			continue
-		var profile: Dictionary = profiles.get(String(member["profile_id"]), {})
 		if report != null and float(member.get("dose_today", 0.0)) > 0.0:
 			_record_fact("dose_%s_%d" % [id, sol], id, sol, &"crew.radiation_exposure",
 				{"crew_id": id}, {"dose": float(member["dose_today"])})
-		var morale_change := 1.0 + float(profile.get("benefit", {}).get("morale_per_sol", profile.get("drawback", {}).get("morale_per_sol", 0.0)))
-		if medic_present:
-			morale_change *= float(ConfigDB.balance["astronaut"]["medical_global_morale_bonus"]) + 1.0
-		member["morale"] = clampf(float(member["morale"]) + morale_change, 0.0, 100.0)
 		if float(member.get("sleep_hours_today", 0.0)) + 0.001 < float(member.get("sleep_hours", 8.0)):
 			member["fatigue"] = minf(100.0, float(member["fatigue"]) + 12.0)
 		member["worked_hours_today"] = 0.0

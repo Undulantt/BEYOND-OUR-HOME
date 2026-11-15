@@ -233,7 +233,7 @@ func _validate_crew(state: Dictionary, full: bool) -> bool:
 			return false
 		if not member.get("id") is String or not member.get("shelter") is bool or not _number(member.get("sleep_hours"), 4, 16):
 			return false
-		for key in ["health", "morale", "fatigue", "dose", "worked_hours_today"]:
+		for key in ["health", "fatigue", "dose", "worked_hours_today"]:
 			if not _number(member.get(key, 0), 0):
 				return false
 		if not member.get("priorities") is Dictionary or not member.get("forbidden_categories") is Array:

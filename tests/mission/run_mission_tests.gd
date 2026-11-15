@@ -57,6 +57,12 @@ func run_tests() -> void:
 	var same: Array[StringName] = [&"medic", &"medic", &"medic", &"medic"]
 	check(session.start_new(same, 19).ok, "repeated roster accepted")
 	check(crew.get_snapshot().size() == 4, "four independent crew")
+	var legacy := SaveService.export_state()
+	legacy["autonomy"] = {"percent": 20.0}
+	legacy["crew"]["members"]["crew_1"]["morale"] = 0.0
+	legacy["crew"]["members"]["crew_1"]["break_remaining"] = 1.0
+	check(SaveService.import_state(legacy) == OK, "legacy indicators save loads")
+	check(not GameState.data.has("autonomy") and not crew.get_snapshot()[0].has("morale") and not crew.get_snapshot()[0].has("break_remaining"), "retired indicators are removed on load")
 	GameState.data["crew"]["members"]["crew_1"]["health"] = 60.0
 	check(float(GameState.data["crew"]["members"]["crew_2"]["health"]) == 100.0, "health independent")
 	GameState.data["crew"]["members"]["crew_1"]["dose"] = 24.0
@@ -65,14 +71,17 @@ func run_tests() -> void:
 	check(not rockets.confirm_manifest(&"rocket_1", {"chips": 1}).ok, "zone required")
 	check(rockets.reserve_landing_zone(&"rocket_1", Rect2i(22, 22, 8, 8)).ok, "landing reserved")
 	var before := ledger.get_amount(&"chips")
+	var iron_before := ledger.get_amount(&"iron_plates")
+	check(not rockets.validate_manifest(&"rocket_1", {"iron_plates": 71}).ok, "iron cargo respects mass limit")
 	check(not rockets.confirm_manifest(&"rocket_1", {"nuclear_core": 100}).ok, "overweight rejected")
 	check(is_equal_approx(ledger.get_amount(&"chips"), before), "invalid manifest no cargo")
-	check(rockets.confirm_manifest(&"rocket_1", {"chips": 2, "astronaut_replacement": 1}).ok, "manifest confirmed")
+	check(rockets.confirm_manifest(&"rocket_1", {"chips": 2, "iron_plates": 10, "astronaut_replacement": 1}).ok, "manifest confirmed")
 	check(not rockets.trigger_arrival(&"rocket_1").ok, "early arrival rejected")
 	GameState.data["clock"]["sol"] = 7
 	check(rockets.trigger_arrival(&"rocket_1").ok, "arrival succeeds")
 	check(is_equal_approx(ledger.get_amount(&"chips"), before + 2.0), "cargo once")
 	check(not rockets.trigger_arrival(&"rocket_1").ok, "arrival idempotent")
+	check(is_equal_approx(ledger.get_amount(&"iron_plates"), iron_before + 10), "iron cargo delivered exactly once")
 	check(rockets.exchange(&"rocket_1", &"crew_1", &"scientist_a").ok, "exchange succeeds")
 	check(not rockets.salvage(&"rocket_1", &"crew_2").ok, "exchange excludes salvage")
 	check(crew.get_snapshot().size() == 5, "replacement has new id")

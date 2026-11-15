@@ -24,7 +24,7 @@ func load_balance() -> bool:
 		error_message = "Non-finite number at %s" % invalid_path
 		push_error(error_message)
 		return false
-	for section in ["time", "astronaut", "initial_inventory", "buildings", "rockets", "autonomy", "events"]:
+	for section in ["time", "astronaut", "initial_inventory", "buildings", "rockets", "events"]:
 		if not candidate.has(section) or not candidate[section] is Dictionary:
 			error_message = "Missing section %s in %s" % [section, BALANCE_PATH]
 			push_error(error_message)
@@ -68,11 +68,6 @@ func load_balance() -> bool:
 				error_message = "Invalid cost: %s.%s" % [type_id, resource_id]
 				push_error(error_message)
 				return false
-	for resource_id in candidate["autonomy"].get("resources", []):
-		if not candidate["initial_inventory"].has(resource_id):
-			error_message = "Unknown autonomy resource: %s" % resource_id
-			push_error(error_message)
-			return false
 	var weights: Dictionary = candidate.get("scan", {}).get("terrain_weights", {})
 	var total_weight := 0.0
 	for terrain_id in weights:
