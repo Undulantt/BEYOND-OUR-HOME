@@ -1,6 +1,8 @@
 class_name BuildingInspector
 extends PanelContainer
 
+signal lesson_requested(id: StringName)
+
 var services: Dictionary = {}
 var target_id: StringName = &""
 var _column: VBoxContainer
@@ -62,6 +64,7 @@ func refresh() -> void:
 	_last_energy_signature = _energy_signature(status)
 	visible = true
 	_column.add_child(UiHelpers.label(_tr(StringName("building.%s" % status.type)), 20))
+	_column.add_child(UiHelpers.button(_tr(&"learning.curiosity"), func(): lesson_requested.emit(target_id)))
 	if not _feedback_text.is_empty():
 		_column.add_child(UiHelpers.label(_feedback_text))
 	_column.add_child(UiHelpers.label(_tr(&"ui.building_health", {"health": int(status.health), "condition": _tr(StringName("condition.%s" % status.condition))})))

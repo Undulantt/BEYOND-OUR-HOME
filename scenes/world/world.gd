@@ -37,6 +37,12 @@ var _last_visual_signature := ""
 var _crew_visuals: Dictionary = {}
 var _rocket_visuals: Dictionary = {}
 var weather: WEATHER_EFFECTS
+var _visual_nodes: Dictionary = {}
+var _visual_states: Dictionary = {}
+var _visual_bounds: Dictionary = {}
+var _mesh_cache: Dictionary = {}
+var _overlays: Dictionary = {}
+var visual_revision := 0
 
 func _ready() -> void:
 	# Each world owns its environment; temporary weather cannot leak to another instance.
@@ -115,11 +121,16 @@ func configure(buildings: BuildingService, grid: GridService) -> void:
 	rebuild_from_state()
 
 func rebuild_from_state() -> void:
+	visual_revision += 1
 	_sync_weather()
 	if terrain_root == null or buildings_root == null:
 		return
 	_clear(terrain_root)
 	_clear(buildings_root)
+	_visual_nodes.clear()
+	_visual_states.clear()
+	_visual_bounds.clear()
+	_mesh_cache.clear()
 	if GameState.data.is_empty() or building_service == null or grid_service == null:
 		return
 	var sector_size := int(ConfigDB.balance["map"]["scan_sector_size"])
@@ -243,7 +254,8 @@ func _refresh_entities() -> void:
 			_crew_visuals[id] = visual
 		var member: Dictionary = members[id]
 		var task: Dictionary = GameState.data.get("crew", {}).get("tasks", {}).get(member.get("task_id", ""), {})
-		var target: Dictionary = GameState.data.get("buildings", {}).get("instances", {}).get(task.get("target_id", "base_1"), {})
+		var location := "base_1" if member.get("shelter", false) else String(task.get("target_id", "base_1"))
+		var target: Dictionary = GameState.data.get("buildings", {}).get("instances", {}).get(location, {})
 		var origin: Array = target.get("origin", [14, 14])
 		_crew_visuals[id].position = Vector3((float(origin[0]) + 0.25 + (index % 2) * 0.5) * CELL_SIZE,
 			1.0, (float(origin[1]) + 0.25 + (index / 2) * 0.5) * CELL_SIZE)
@@ -307,12 +319,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			var cell := _screen_cell(event.position)
-			if cell == Vector2i(-1, -1):
+			if cell == Vector2i(-1, -1) and not String(placement_type).is_empty():
 				return
 			if not String(placement_type).is_empty():
 				placement_requested.emit(GameContracts.PlacementRequest.new(placement_type, cell, placement_rotation_quarters))
 			else:
-				selected_id = _building_at(cell)
+				selected_id = _pick_building(event.position)
 				target_selected.emit(selected_id)
 			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion and not String(placement_type).is_empty() and building_service != null:
@@ -374,6 +386,7 @@ func _add_building_visual(id: StringName) -> void:
 				if building_type == "tunnel":
 					_add_tunnel_caps(model, tunnel_model, item)
 				_apply_model_status(model, status, item)
+				_register_visual(id, model)
 				return
 			model.queue_free()
 	_add_fallback_building_visual(id, item, status, origin, size)
@@ -458,14 +471,20 @@ func _apply_model_status(model: Node3D, status: BuildingStatus, item: Dictionary
 		tint = Color(0.9, 0.55, 0.08, 0.35)
 	elif status.demand > 0.0 and not status.powered:
 		tint = Color(0.015, 0.02, 0.04, 0.48)
-	if tint.a <= 0.0:
-		return
-	var overlay := StandardMaterial3D.new()
-	overlay.albedo_color = tint
-	overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	overlay.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
-	for node in model.find_children("*", "MeshInstance3D", true, false):
+	var overlay: StandardMaterial3D = null
+	if tint.a > 0.0:
+		if not _overlays.has(tint):
+			var material := StandardMaterial3D.new()
+			material.albedo_color = tint
+			material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+			_overlays[tint] = material
+		overlay = _overlays[tint]
+	var meshes: Array = _mesh_cache[String(model.name)] if _mesh_cache.has(String(model.name)) else model.find_children("*", "MeshInstance3D", true, false)
+	if model is MeshInstance3D:
+		meshes = [model]
+	for node in meshes:
 		var mesh_instance := node as MeshInstance3D
 		if mesh_instance != null:
 			mesh_instance.material_overlay = overlay
@@ -565,14 +584,10 @@ func _add_fallback_building_visual(id: StringName, item: Dictionary, status: Bui
 		height * 0.5, (float(origin[1]) + float(size[1]) * 0.5) * CELL_SIZE)
 	var material := StandardMaterial3D.new()
 	material.albedo_color = _building_color(String(item["type"]))
-	if status.condition == &"breached" or status.condition == &"destroyed" or item.get("crop") == "dead":
-		material.albedo_color = Color(0.75, 0.12, 0.1)
-	elif item.get("crop") == "wilting":
-		material.albedo_color = Color(0.72, 0.52, 0.12)
-	elif status.demand > 0.0 and not status.powered:
-		material.albedo_color = material.albedo_color.darkened(0.55)
 	visual.material_override = material
 	buildings_root.add_child(visual)
+	_apply_model_status(visual, status, item)
+	_register_visual(id, visual)
 
 func _building_color(kind: String) -> Color:
 	match kind:
@@ -605,14 +620,92 @@ func _visual_signature() -> String:
 func _on_energy_changed(_snapshot: GameContracts.EnergySnapshot) -> void:
 	var signature := _visual_signature()
 	if signature != _last_visual_signature:
-		rebuild_from_state()
+		_refresh_visual_states()
+		_last_visual_signature = signature
 
 func _on_research_changed(_tech_id: StringName, change: StringName) -> void:
 	if change == &"sector_revealed":
 		rebuild_from_state()
 
-func _on_building_changed(_id: StringName, _change: StringName) -> void:
-	rebuild_from_state()
+func _on_building_changed(_id: StringName, change: StringName) -> void:
+	if change in [&"placed", &"removed"]:
+		rebuild_from_state()
+	else:
+		_refresh_visual_states()
+		var item: Dictionary = GameState.data.get("buildings", {}).get("instances", {}).get(String(_id), {})
+		if change in [&"isolated", &"repaired"] and item.get("type") == "tunnel" and _visual_nodes.has(String(_id)):
+			var model: Node3D = _visual_nodes[String(_id)]
+			for child in model.get_children():
+				if String(child.name).begins_with("SealedPort_"):
+					model.remove_child(child)
+					child.queue_free()
+			_add_tunnel_caps(model, _tunnel_model(item), item)
+			_register_visual(_id, model)
+			visual_revision += 1
+
+func _register_visual(id: StringName, model: Node3D) -> void:
+	_visual_nodes[String(id)] = model
+	_mesh_cache[String(id)] = model.find_children("*", "MeshInstance3D", true, false)
+	var bounds: AABB = model.get_aabb() if model is MeshInstance3D else _model_bounds(model)
+	_visual_bounds[String(id)] = model.global_transform * bounds
+	_visual_states[String(id)] = _status_signature(building_service.get_status(id))
+
+func _status_signature(status: BuildingStatus) -> String:
+	return "%s:%s:%s" % [status.powered, status.condition, status.modifiers.get("crop", "")]
+
+func _refresh_visual_states() -> void:
+	for id in _visual_nodes:
+		var status := building_service.get_status(StringName(id))
+		if status == null:
+			continue
+		var signature := _status_signature(status)
+		if _visual_states.get(id) == signature:
+			continue
+		_apply_model_status(_visual_nodes[id], status, GameState.data.buildings.instances[id])
+		_visual_states[id] = signature
+
+func _pick_building(screen: Vector2) -> StringName:
+	# Intersect the visible model bounds before falling back to the ground grid.
+	# The authored habitats extend beyond their logical footprints.
+	var camera: Camera3D = camera_rig.camera
+	var origin := camera.project_ray_origin(screen)
+	var direction := camera.project_ray_normal(screen)
+	var best := INF
+	var target := &""
+	for id in _visual_bounds:
+		var bounds: AABB = _visual_bounds[id]
+		var hit: Variant = bounds.grow(0.08).intersects_ray(origin, direction)
+		if hit is Vector3:
+			var distance := origin.distance_squared_to(hit)
+			if distance < best:
+				best = distance
+				target = StringName(id)
+	if target != &"":
+		return target
+	var cell := _screen_cell(screen)
+	target = _building_at(cell)
+	if target != &"":
+		return target
+	# A small screen-space tolerance also makes narrow tunnels easier to select.
+	var nearest := 18.0
+	for id in _visual_bounds:
+		var center: Vector3 = (_visual_bounds[id] as AABB).get_center()
+		if camera.is_position_behind(center):
+			continue
+		var distance := camera.unproject_position(center).distance_to(screen)
+		if distance < nearest:
+			nearest = distance
+			target = StringName(id)
+	return target
+
+func get_building_info_position(id: String) -> Vector2:
+	if not _visual_bounds.has(id):
+		return Vector2(-10000, -10000)
+	var bounds: AABB = _visual_bounds[id]
+	var point := bounds.get_center() + Vector3(0, bounds.size.y * 0.5 + 0.3, 0)
+	if camera_rig.camera.is_position_behind(point):
+		return Vector2(-10000, -10000)
+	return camera_rig.camera.unproject_position(point)
 
 func _clear(root: Node3D) -> void:
 	for child in root.get_children():

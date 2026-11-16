@@ -84,9 +84,44 @@ func order_shelter(crew_id: StringName, shelter: bool = true) -> GameContracts.V
 	var member := _member(crew_id)
 	if member.is_empty() or not bool(member.get("alive", false)):
 		return GameContracts.failure(&"crew_unavailable")
+	if shelter and building_service != null:
+		var habitat: BuildingStatus = building_service.get_status(&"base_1")
+		if habitat == null or habitat.health <= 0.0:
+			return GameContracts.failure(&"shelter_unavailable")
 	member["shelter"] = shelter
 	SignalBus.crew_changed.emit(crew_id)
 	return GameContracts.success()
+
+func get_exposure_context(crew_id: StringName) -> Dictionary:
+	var member := _member(crew_id)
+	var habitat: Dictionary = GameState.data.get("buildings", {}).get("instances", {}).get("base_1", {})
+	var safe_habitat := not habitat.is_empty() and float(habitat.get("health", 0.0)) > 0.0
+	if member.get("shelter", false) and safe_habitat:
+		return {"location_id": "base_1", "exposure": "sheltered"}
+	var task: Dictionary = GameState.data.get("crew", {}).get("tasks", {}).get(member.get("task_id", ""), {})
+	if task.is_empty() or task.get("state") in ["completed", "cancelled"]:
+		return {"location_id": "base_1", "exposure": "habitat" if safe_habitat else "eva"}
+	var target := String(task.get("target_id", "base_1"))
+	var outdoor: bool = task.get("category") == "emergency_eva" or task.get("task_type") in ["clean", "refuel"]
+	var location: Dictionary = GameState.data.get("buildings", {}).get("instances", {}).get(target, {})
+	if float(location.get("health", 0.0)) <= 0.0:
+		outdoor = true
+	return {"location_id": target, "exposure": "eva" if outdoor else "indoors"}
+
+func _apply_exposure(crew_id: StringName, member: Dictionary, fraction: float) -> void:
+	var context := get_exposure_context(crew_id)
+	var flare := bool(GameState.data.get("events", {}).get("solar_flare_active", false))
+	var rate := 0.0
+	if context.exposure == "eva":
+		rate = float(ConfigDB.balance["events"]["tunnel_breach"]["repair_dose"])
+		if flare:
+			rate *= float(ConfigDB.balance["events"]["solar_flare"]["eva_dose_multiplier"])
+	elif context.exposure == "indoors" and flare:
+		rate = float(ConfigDB.balance["events"]["solar_flare"].get("indoor_dose_per_sol", 4.0))
+	var profile: Dictionary = Astronaut.profiles().get(String(member["profile_id"]), {})
+	var added := rate * float(profile.get("drawback", {}).get("dose_multiplier", 1.0)) * fraction
+	member["dose"] = float(member["dose"]) + added
+	member["dose_today"] = float(member.get("dose_today", 0.0)) + added
 
 func assign_eva_repair(crew_id: StringName, building_id: StringName, mode: StringName = &"seal") -> GameContracts.ValidationResult:
 	var member := _member(crew_id)
@@ -207,6 +242,9 @@ func step(delta_seconds: float) -> void:
 			member["health"] = maxf(0.0, float(member["health"]) - 12.0 * shortage * fraction)
 		var task_id := String(member.get("task_id", ""))
 		var task: Dictionary = GameState.data["crew"]["tasks"].get(task_id, {})
+		# Exposure follows the person's location, even when an assigned task is
+		# blocked or their daily work allowance is exhausted. Shelter moves them home.
+		_apply_exposure(StringName(id), member, fraction)
 		if not task.is_empty() and not bool(member.get("shelter", false)):
 			var worked := float(member.get("worked_hours_today", 0.0))
 			var max_work := minf(float(ConfigDB.balance["astronaut"]["work_hours_per_sol"]), 24.0 - float(member.get("sleep_hours", 8.0)))
@@ -223,13 +261,6 @@ func step(delta_seconds: float) -> void:
 				member["worked_hours_today"] = worked + effort
 				if performed > 0.0:
 					member["fatigue"] = minf(100.0, float(member["fatigue"]) + 10.0 * fraction)
-				if performed > 0.0 and task.get("category") == "emergency_eva":
-					var dose_rate := 8.0 * float(profile.get("drawback", {}).get("dose_multiplier", 1.0))
-					if bool(GameState.data.get("events", {}).get("solar_flare_active", false)):
-						dose_rate *= float(ConfigDB.balance["events"]["solar_flare"]["eva_dose_multiplier"])
-					var dose_added := dose_rate * fraction
-					member["dose"] = float(member["dose"]) + dose_added
-					member["dose_today"] = float(member.get("dose_today", 0.0)) + dose_added
 		member["sleep_hours_today"] = minf(float(member["sleep_hours"]), float(member.get("sleep_hours_today", 0.0)) + fraction * float(member["sleep_hours"]))
 		member["fatigue"] = maxf(0.0, float(member["fatigue"]) - 8.0 * fraction)
 		if float(member["dose"]) >= float(ConfigDB.balance["astronaut"]["radiation_limit"]):

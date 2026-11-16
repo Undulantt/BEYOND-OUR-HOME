@@ -268,7 +268,8 @@
 				2.0
 			],
 			"eva_dose_multiplier": 2.5,
-			"construction_dose_multiplier": 1.8
+			"construction_dose_multiplier": 1.8,
+			"indoor_dose_per_sol": 4.0
 		},
 		"tunnel_breach": {
 			"oxygen_loss_per_sol": 4.0,

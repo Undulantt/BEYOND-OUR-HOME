@@ -232,6 +232,11 @@ func _tutorial_data() -> Dictionary:
 	if _tutorial_definition.is_empty():
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/tutorial.json"))
 		_tutorial_definition = parsed if parsed is Dictionary else {}
+		var layout: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/world/initial_layout.json"))
+		var initial_tunnels: Array[String] = []
+		for item: Dictionary in layout.get("buildings", []):
+			if item.get("type") == "tunnel": initial_tunnels.append(String(item["id"]))
+		_tutorial_definition["_initial_tunnels"] = initial_tunnels
 	return _tutorial_definition
 
 func _refresh_tutorial() -> void:
@@ -326,11 +331,12 @@ func _tutorial_condition(condition: String) -> bool:
 	if condition == "ack":
 		return false
 	if condition == "tunnel":
-		var count := 0
-		for item in GameState.data.get("buildings", {}).get("instances", {}).values():
-			if item.get("type") == "tunnel":
-				count += 1
-		return count > 2 or _has_building("laboratory")
+		var initial: Array = _tutorial_data().get("_initial_tunnels", [])
+		for id in GameState.data.get("buildings", {}).get("instances", {}):
+			var item: Dictionary = GameState.data["buildings"]["instances"][id]
+			if item.get("type") == "tunnel" and not initial.has(String(id)) and float(item.get("health", 0.0)) > 0.0:
+				return true
+		return _has_building("laboratory")
 	if condition == "laboratory":
 		return _has_building("laboratory")
 	if condition.begins_with("building:"):
@@ -450,24 +456,23 @@ func _on_event_changed(id: StringName, phase: StringName) -> void:
 		var kind := String(event.get("type", ""))
 		if phase == &"warning":
 			var sols := maxi(0, int(event.get("start_sol", 0)) - int(GameState.data.get("clock", {}).get("sol", 1)))
-			var key := "event.%s.warning" % kind
+			var key := "learning.event.%s.warning" % kind
 			var focus: StringName = &"ui:workspace_crew"
-			var teaching: bool = GameState.data.get("tutorial", {}).get("guided", false) or GameState.data.get("tutorial", {}).get("completed", []).has("finish")
-			if teaching and kind in ["dust_storm", "solar_flare"]:
-				key = "onboarding.dust.body" if kind == "dust_storm" else "onboarding.flare.body"
-				if kind == "dust_storm":
-					focus = &"ui:workspace_energy"
-					for building_id in GameState.data.get("buildings", {}).get("instances", {}):
-						if GameState.data["buildings"]["instances"][building_id].get("type") == "solar_panel":
-							focus = StringName(building_id)
-							break
-			add_fact(StringName("event_%s" % id), &"critical", StringName(key), {"sols": sols}, focus)
+			if kind == "dust_storm":
+				focus = &"ui:workspace_energy"
+				for building_id in GameState.data.get("buildings", {}).get("instances", {}):
+					if GameState.data["buildings"]["instances"][building_id].get("type") == "solar_panel":
+						focus = StringName(building_id)
+						break
+			add_fact(StringName("event_%s" % id), &"critical", StringName(key), {"sols": sols, "event_type": kind}, focus)
 			observe_fact(&"event_warning", {"event_id": kind})
 		elif phase == &"active":
 			resolve(StringName("event_%s" % id))
 			var focus := StringName(event.get("target_ids", [])[0]) if not event.get("target_ids", []).is_empty() else &"ui:workspace_crew"
 			var key := "onboarding.breach.body" if kind == "tunnel_breach" and GameState.data.get("tutorial", {}).get("guided", false) else "event.%s.active" % kind
-			add_fact(StringName("event_%s_active" % id), &"critical", StringName(key), {}, focus)
+			if kind != "tunnel_breach" or not GameState.data.get("tutorial", {}).get("guided", false):
+				key = "learning.event.%s.brief" % kind
+			add_fact(StringName("event_%s_active" % id), &"critical", StringName(key), {"event_type": kind}, focus)
 		if phase in [&"warning", &"active"]:
 			_pause_tutorial()
 		break

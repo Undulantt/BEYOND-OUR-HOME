@@ -1,0 +1,119 @@
+{
+  "meta": {
+    "verified_on": "2026-11-15",
+    "note": "NASA references and clearly labelled gameplay adaptations; no live forecast."
+  },
+  "buildings": {
+    "base": {
+      "purpose_key": "learning.building.base.purpose",
+      "curiosity_key": "learning.building.base.curiosity"
+    },
+    "isru": {
+      "purpose_key": "learning.building.isru.purpose",
+      "curiosity_key": "learning.building.isru.curiosity"
+    },
+    "greenhouse": {
+      "purpose_key": "learning.building.greenhouse.purpose",
+      "curiosity_key": "learning.building.greenhouse.curiosity"
+    },
+    "laboratory": {
+      "purpose_key": "learning.building.laboratory.purpose",
+      "curiosity_key": "learning.building.laboratory.curiosity"
+    },
+    "solar_panel": {
+      "purpose_key": "learning.building.solar_panel.purpose",
+      "curiosity_key": "learning.building.solar_panel.curiosity"
+    },
+    "battery": {
+      "purpose_key": "learning.building.battery.purpose",
+      "curiosity_key": "learning.building.battery.curiosity",
+      "sources": [{"provider": "NASA", "title": "Solar Arrays on the International Space Station", "url": "https://www.nasa.gov/image-article/solar-arrays-international-space-station/"}]
+    },
+    "reactor": {
+      "purpose_key": "learning.building.reactor.purpose",
+      "curiosity_key": "learning.building.reactor.curiosity"
+    },
+    "mine": {
+      "purpose_key": "learning.building.mine.purpose",
+      "curiosity_key": "learning.building.mine.curiosity"
+    },
+    "refinery": {
+      "purpose_key": "learning.building.refinery.purpose",
+      "curiosity_key": "learning.building.refinery.curiosity"
+    },
+    "printer_3d": {
+      "purpose_key": "learning.building.printer_3d.purpose",
+      "curiosity_key": "learning.building.printer_3d.curiosity",
+      "limit_key": "learning.printer.limit",
+      "sources": [
+        {
+          "title": "Solving the Challenges of Long Duration Space Flight with 3D Printing",
+          "provider": "NASA",
+          "url": "https://www.nasa.gov/missions/station/solving-the-challenges-of-long-duration-space-flight-with-3d-printing/"
+        }
+      ]
+    },
+    "landing_pad": {
+      "purpose_key": "learning.building.landing_pad.purpose",
+      "curiosity_key": "learning.building.landing_pad.curiosity"
+    },
+    "tunnel": {
+      "purpose_key": "learning.building.tunnel.purpose",
+      "curiosity_key": "learning.building.tunnel.curiosity"
+    }
+  },
+  "events": {
+    "dust_storm": {
+      "title_key": "learning.event.dust_storm.title",
+      "why_key": "learning.event.dust_storm.why",
+      "consequence_key": "learning.event.dust_storm.consequence",
+      "response_key": "learning.event.dust_storm.response",
+      "limit_key": "learning.event.dust_storm.limit",
+      "sources": [
+        {
+          "title": "The Fact and Fiction of Martian Dust Storms",
+          "url": "https://www.nasa.gov/solar-system/the-fact-and-fiction-of-martian-dust-storms/",
+          "provider": "NASA"
+        },
+        {
+          "title": "Dust Lifting and Dust Cycle Modeling",
+          "url": "https://www.nasa.gov/general/dust-lifting-and-dust-cycle-modeling/",
+          "provider": "NASA"
+        }
+      ]
+    },
+    "solar_flare": {
+      "title_key": "learning.event.solar_flare.title",
+      "why_key": "learning.event.solar_flare.why",
+      "consequence_key": "learning.event.solar_flare.consequence",
+      "response_key": "learning.event.solar_flare.response",
+      "limit_key": "learning.event.solar_flare.limit",
+      "sources": [
+        {
+          "title": "Solar Flares FAQs",
+          "url": "https://science.nasa.gov/blogs/solar-cycle-25/2022/06/10/solar-flares-faqs/",
+          "provider": "NASA"
+        },
+        {
+          "title": "Real Martians: How to Protect Astronauts from Space Radiation on Mars",
+          "url": "https://www.nasa.gov/science-research/heliophysics/real-martians-how-to-protect-astronauts-from-space-radiation-on-mars/",
+          "provider": "NASA"
+        }
+      ]
+    },
+    "tunnel_breach": {
+      "title_key": "learning.event.tunnel_breach.title",
+      "why_key": "learning.event.tunnel_breach.why",
+      "consequence_key": "learning.event.tunnel_breach.consequence",
+      "response_key": "learning.event.tunnel_breach.response",
+      "limit_key": "learning.event.tunnel_breach.limit",
+      "sources": [
+        {
+          "title": "Meteoroid Environment Office: Overview",
+          "url": "https://www.nasa.gov/meteoroid-environment-office/overview/",
+          "provider": "NASA"
+        }
+      ]
+    }
+  }
+}

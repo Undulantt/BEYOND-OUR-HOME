@@ -3,6 +3,7 @@ extends PanelContainer
 
 signal focus_requested(target_id: StringName)
 signal layout_requested()
+signal lesson_requested(kind: String)
 
 const ROBOT_TEXTURE: Texture2D = preload("res://assets/robot/Designer (7).png")
 
@@ -52,16 +53,16 @@ func refresh() -> void:
 
 	var portrait := TextureRect.new()
 	portrait.texture = ROBOT_TEXTURE
-	portrait.custom_minimum_size = Vector2(56.0, 56.0) if tutorial_mode else Vector2(76.0, 72.0)
+	portrait.custom_minimum_size = Vector2(84.0, 84.0)
 	portrait.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	portrait.visible = not tutorial_mode
+	portrait.name = "RobotPortrait"
 	_content.add_child(portrait)
-	UiHelpers.add_si_mark(portrait, 10)
+	UiHelpers.add_si_mark(portrait, 14)
 
 	var text_column := VBoxContainer.new()
 	text_column.add_theme_constant_override("separation", 5)
@@ -95,6 +96,12 @@ func refresh() -> void:
 	buttons.alignment = FlowContainer.ALIGNMENT_CENTER
 	buttons.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text_column.add_child(buttons)
+	var event_type := String(entry.get("params", {}).get("event_type", ""))
+	if event_type in ["dust_storm", "solar_flare", "tunnel_breach"]:
+		buttons.add_child(UiHelpers.button(_tr(&"learning.why_button"), func():
+			dialogue.acknowledge(StringName(entry["id"]))
+			refresh()
+			lesson_requested.emit(event_type)))
 	if not String(entry.get("focus_target", "")).is_empty():
 		buttons.add_child(UiHelpers.button(_tr(&"onboarding.focus" if tutorial_mode else &"ui.focus"), _focus_notice.bind(entry, step), true))
 	var confirm_key := &"ui.acknowledge"

@@ -14,3 +14,14 @@
 !.env.example
 .DS_Store
 Thumbs.db
+
+# Local Windows delivery build (distribute separately from source control)
+/BEYOND OUR HOME.exe
+/BEYOND OUR HOME.pck
+
+# Development history and local tooling are not part of the final delivery
+/archivo_local/
+/build/
+/juego_windows/
+/tools/
+/AGENTS.md

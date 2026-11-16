@@ -225,6 +225,8 @@ func _show_crew() -> void:
 			continue
 		var id := StringName(member["id"])
 		_body.add_child(UiHelpers.label("%s · %s" % [UiHelpers.entity_name(String(id)), _tr(StringName("profile.%s" % member["profile_id"]))], 22))
+		var context: Dictionary = services["crew"].get_exposure_context(id)
+		_body.add_child(UiHelpers.label(_tr(StringName("crew.exposure." + String(context.exposure)))))
 		_body.add_child(UiHelpers.label(_tr(&"ui.crew_vitals", {"health": int(member.get("health", 0)), "dose": int(member.get("dose", 0))})))
 		var task_id := StringName(member.get("task_id", ""))
 		if not String(task_id).is_empty():

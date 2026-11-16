@@ -8,6 +8,9 @@ var snapshot := GameContracts.EnergySnapshot.new()
 func rebuild_from_state() -> void:
 	snapshot = GameContracts.EnergySnapshot.new()
 	snapshot.stored = float(GameState.data.get("power", {}).get("stored", 0.0))
+	# Reconstruct the paused preview after loading, once grid and buildings exist.
+	if building_service != null and grid_service != null:
+		step(0.0)
 
 func step(delta_seconds: float) -> void:
 	var inputs: Dictionary = building_service.get_power_inputs() if building_service != null else {}
@@ -40,7 +43,9 @@ func step(delta_seconds: float) -> void:
 		var pa := int(GameState.data["power"]["priorities"].get(String(a.get("building_id", "")), a.get("priority", 2)))
 		var pb := int(GameState.data["power"]["priorities"].get(String(b.get("building_id", "")), b.get("priority", 2)))
 		return pa < pb if pa != pb else String(a.get("building_id", "")) < String(b.get("building_id", "")))
-	var available := next.generation + minf(discharge_rate, next.stored / fraction) if fraction > 0.0 else next.generation
+	# A zero-delta preview must include battery support without spending charge.
+	var allocation_fraction := fraction if fraction > 0.0 else SimulationRunner.STEP_SECONDS / sol_seconds
+	var available := next.generation + minf(discharge_rate, next.stored / allocation_fraction)
 	var allocated_total := 0.0
 	for consumer in ordered:
 		if not consumer is Dictionary:
@@ -49,7 +54,7 @@ func step(delta_seconds: float) -> void:
 		var demand := maxf(0.0, float(consumer.get("demand", 0.0)))
 		var enabled := bool(consumer.get("enabled", true)) and (unrestricted or connected.has(id))
 		var priority := int(GameState.data["power"]["priorities"].get(id, consumer.get("priority", 2)))
-		if enabled:
+		if bool(consumer.get("enabled", true)):
 			next.demand += demand
 		var allocated := demand if enabled and available + 0.000001 >= demand else 0.0
 		available -= allocated

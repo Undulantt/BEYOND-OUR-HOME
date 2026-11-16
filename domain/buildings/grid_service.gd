@@ -83,7 +83,10 @@ func get_energy_links() -> Array[Dictionary]:
 				linked[all_id] = true
 			break
 	for id in buildings:
-		if buildings[id].get("type", "") == "solar_panel" and bool(buildings[id].get("enabled", true)) and float(buildings[id].get("health", 0.0)) > 0.0:
+		var item: Dictionary = buildings[id]
+		var charged := float(GameState.data.get("power", {}).get("stored", 0.0)) + float(GameState.data.get("power", {}).get("locked_stored", 0.0)) > 0.0
+		var source: bool = item.get("type") == "solar_panel" or (item.get("type") == "battery" and charged)
+		if source and bool(item.get("enabled", true)) and float(item.get("health", 0.0)) > 0.0:
 			linked[id] = true
 	var changed := true
 	while changed:

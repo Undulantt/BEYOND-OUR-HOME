@@ -27,6 +27,10 @@ var _toolbar: Dictionary = {}
 var _active_panel: StringName = &"workspace"
 var _time: TimeControls
 var _tutorial_button: Button
+const LEARNING_VIEW := preload("res://scenes/ui/learning_card.gd")
+var _learning
+var _info_buttons: Dictionary = {}
+var _info_layout_signature: Array = []
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -85,6 +89,10 @@ func _ready() -> void:
 	_views["workspace"] = _workspace
 	_inspector = BuildingInspector.new()
 	_mount_view("inspector", _inspector)
+	_inspector.lesson_requested.connect(show_building_lesson)
+	_learning = LEARNING_VIEW.new()
+	_mount_view("learning", _learning)
+	_learning.controls_requested.connect(_on_target_selected)
 	_report = SolReportView.new()
 	_mount_view("report", _report)
 	_log = ActivityLog.new()
@@ -95,11 +103,12 @@ func _ready() -> void:
 	_guide.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	add_child(_guide)
 	_guide.layout_requested.connect(_layout_guide)
+	_guide.lesson_requested.connect(show_event_lesson)
 	var footer := HFlowContainer.new()
 	footer.add_theme_constant_override("h_separation", 8)
 	footer.add_theme_constant_override("v_separation", 6)
 	column.add_child(footer)
-	for id in ["tools", "report", "log", "help", "demo"]:
+	for id in ["tools", "report", "log", "help", "events", "demo"]:
 		var item := UiHelpers.button("", func(): _toolbar_action(id))
 		_toolbar[id] = item
 		_compact_footer_button(item)
@@ -163,6 +172,7 @@ func show_panel(id: StringName) -> void:
 	_dock_title.visible = id != &"workspace"
 	_workspace._tab_picker.visible = id == &"workspace"
 	_dock_title.text = UiHelpers.translated(StringName("ui.panel.%s" % id))
+	_layout()
 	call_deferred("_update_camera")
 
 func close_panel() -> void:
@@ -182,11 +192,12 @@ func _toolbar_action(id: String) -> void:
 		"help":
 			show_panel(&"workspace")
 			_workspace.open_tab(&"codex")
+		"events": show_event_lesson("dust_storm")
 
 func _layout() -> void:
 	if _dock == null:
 		return
-	_dock.custom_minimum_size.x = clampf(size.x * 0.22, 260.0, 320.0)
+	_dock.custom_minimum_size.x = clampf(size.x * 0.32, 320.0, 440.0) if _active_panel == &"learning" else clampf(size.x * 0.22, 260.0, 320.0)
 	_layout_guide()
 	call_deferred("_update_camera")
 
@@ -233,6 +244,7 @@ func configure(dependencies: Dictionary, world_node: Node = null) -> void:
 	_workspace.configure(dependencies)
 	_workspace.set_world(world)
 	_inspector.configure(dependencies)
+	_learning.services = dependencies
 	_admin.configure(dependencies)
 	if dependencies.has("dialogue"):
 		_log.configure(dependencies["dialogue"])
@@ -250,6 +262,109 @@ func _on_target_selected(id: StringName) -> void:
 	_inspector.show_target(id)
 	if _inspector.visible:
 		show_panel(&"inspector")
+
+func show_building_lesson(id: StringName) -> void:
+	if world != null and not String(world.placement_type).is_empty():
+		world.cancel_placement()
+	_learning.show_building(id)
+	show_panel(&"learning")
+
+func show_event_lesson(kind: String) -> void:
+	_learning.show_event(kind)
+	show_panel(&"learning")
+
+func _process(_delta: float) -> void:
+	if not is_visible_in_tree() or world == null or not is_instance_valid(_map_space):
+		return
+	var camera: Camera3D = world.camera_rig.camera
+	var signature: Array = [camera.global_transform, camera.size, camera.h_offset, camera.v_offset,
+		_map_space.get_global_transform(), _map_space.size, get_window().size,
+		world.visual_revision, LocalizationDB.language, world.placement_type, world.selected_id]
+	if signature == _info_layout_signature:
+		return
+	_info_layout_signature = signature
+	var instances: Dictionary = GameState.data.get("buildings", {}).get("instances", {})
+	for id in _info_buttons.keys():
+		if not instances.has(id):
+			_info_buttons[id].queue_free()
+			_info_buttons.erase(id)
+	var occupied: Array[Rect2] = []
+	var target_size := maxf(44.0, 44.0 * get_viewport_rect().size.y / maxf(1.0, float(get_window().size.y)))
+	var ids: Array = instances.keys()
+	# Keep important/selected buildings available first when distant icons overlap.
+	ids.sort_custom(func(a, b):
+		if (String(a) == String(world.selected_id)) != (String(b) == String(world.selected_id)):
+			return String(a) == String(world.selected_id)
+		var a_tunnel: bool = instances[a]["type"] == "tunnel"
+		var b_tunnel: bool = instances[b]["type"] == "tunnel"
+		if a_tunnel != b_tunnel: return not a_tunnel
+		if (instances[a]["type"] == "base") != (instances[b]["type"] == "base"):
+			return instances[a]["type"] == "base"
+		return String(a) < String(b))
+	for id in ids:
+		if not _info_buttons.has(id):
+			var button := _make_info_button(StringName(id))
+			button.name = "BuildingInfo_" + id
+			button.custom_minimum_size = Vector2.ONE * target_size
+			_map_space.add_child(button)
+			_info_buttons[id] = button
+		var icon: Button = _info_buttons[id]
+		icon.tooltip_text = UiHelpers.translated(&"learning.icon", {"building": UiHelpers.technology_name(instances[id]["type"])})
+		icon.custom_minimum_size = Vector2.ONE * target_size
+		icon.size = Vector2.ONE * target_size
+		var screen: Vector2 = world.get_building_info_position(id)
+		var point := _map_space.get_global_transform().affine_inverse() * screen
+		var rect := Rect2(point - icon.size * 0.5, icon.size)
+		if not Rect2(Vector2.ZERO, _map_space.size).has_point(point):
+			icon.hide()
+			continue
+		# Never detach a cue from its building to resolve collisions. At distant
+		# zooms hide overlapping cues; model selection and inspector facts still work.
+		var collision := false
+		for other in occupied:
+			if other.grow(2).intersects(rect): collision = true; break
+		icon.position = rect.position
+		icon.visible = not collision and Rect2(Vector2.ZERO, _map_space.size).encloses(rect) and String(world.placement_type).is_empty()
+		if icon.visible: occupied.append(rect)
+
+func _make_info_button(id: StringName) -> Button:
+	var button := Button.new()
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.pressed.connect(show_building_lesson.bind(id))
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	var focus := StyleBoxFlat.new()
+	focus.draw_center = false
+	focus.border_color = Color("ffd866")
+	focus.set_border_width_all(1)
+	focus.set_corner_radius_all(10)
+	button.add_theme_stylebox_override("focus", focus)
+	# Small visible cue inside a generous transparent click target.
+	var cue := Panel.new()
+	cue.name = "InfoCue"
+	cue.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	cue.offset_left = -12
+	cue.offset_top = -12
+	cue.offset_right = 12
+	cue.offset_bottom = 12
+	cue.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.025, 0.035, 0.05, 0.48)
+	background.set_corner_radius_all(12)
+	cue.add_theme_stylebox_override("panel", background)
+	button.add_child(cue)
+	var glyph := Label.new()
+	glyph.text = "!"
+	glyph.add_theme_font_size_override("font_size", 20)
+	glyph.add_theme_color_override("font_color", Color("ffd866"))
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cue.add_child(glyph)
+	glyph.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	button.mouse_entered.connect(func(): cue.modulate = Color(1.2, 1.2, 1.2))
+	button.mouse_exited.connect(func(): cue.modulate = Color.WHITE)
+	return button
 
 func focus_target(id: StringName) -> void:
 	if String(id).begins_with("ui:tutorial_") and services.has("dialogue"):
